@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Data (MOABB downloads here)
+data/
+.moabb/
+
+# Environment
+.env
+.env.local
+
+# Claude Code
+.claude/
+.superpowers/
+
+# Node
+node_modules/
+.next/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
