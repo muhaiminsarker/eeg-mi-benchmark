@@ -1,4 +1,3 @@
-import numpy as np
 import mne
 from moabb.datasets import BNCI2014_001
 from moabb.paradigms import MotorImagery

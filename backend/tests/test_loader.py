@@ -11,8 +11,8 @@ def test_get_run_options_returns_expected_structure():
     assert "label" in first
 
 
-def test_load_subject_epochs_returns_epochs_object(moabb_subject_1_run_4):
-    epochs, error = moabb_subject_1_run_4
+def test_load_subject_epochs_returns_epochs_object(moabb_s1_imagined_hand):
+    epochs, error = moabb_s1_imagined_hand
     assert error is None
     assert epochs is not None
     assert len(epochs) > 0
