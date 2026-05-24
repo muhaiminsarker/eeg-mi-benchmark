@@ -16,7 +16,7 @@ A running log of what each task built and why — written in plain English, conn
 | [Task 6](#task-6-visualizetopoplot-endpoint) | /visualize/topoplot endpoint (MNE SVG) | ✅ Done |
 | [Loader Fix](#loader-fix-frequency-range-epoch-window-and-tmin-alignment) | Fix paradigm fmin/fmax, tmin/tmax, and EpochsArray time axis | ✅ Done |
 | [Task 7](#task-7-frontend-scaffold) | Frontend scaffold — Next.js, Tailwind, Cortex Purple | ✅ Done |
-| Task 8 | Shared types and API client | ⏳ Pending |
+| [Task 8](#task-8-shared-types-and-api-client) | Shared types and API client | ✅ Done |
 | Task 9 | NavBar and ContextBar components | ⏳ Pending |
 | Task 10 | TimeSeriesChart — Nivo, channel toggles, task shading | ⏳ Pending |
 | Task 11 | PSDChart — Nivo, Mu/Beta band highlighting | ⏳ Pending |
@@ -237,5 +237,37 @@ To me, this color system is not just aesthetic. A dark, low-stimulus UI fits the
 Nivo was installed for charting (`@nivo/line`, `@nivo/core`). The line chart component will carry the timeseries and PSD visualizations in Tasks 10 and 11.
 
 The Jest and Testing Library setup gives the frontend a testing foundation from the start. One thing worth noting: the plan had a typo in the Jest config, `setupFilesAfterFramework` instead of `setupFilesAfterEnv`. With the wrong key, Jest silently ignores the setup file and `@testing-library/jest-dom` matchers are unavailable in tests. That was caught and fixed before moving on.
+
+---
+
+## Task 8: Shared Types and API Client
+
+Task 8 established the shared data contract and API communication layer that every future frontend component will depend on. For me, this is one of the most important foundational steps in the whole frontend build, because without a typed interface between the React components and the FastAPI backend, you end up with a lot of guesswork about what shape the data actually is.
+
+The `types.ts` file defines interfaces for every response the backend can return. For example, the timeseries interface maps directly onto what `GET /visualize/timeseries` sends back:
+
+```typescript
+export interface TimeseriesData {
+  times: number[]
+  channels: {
+    C3: number[]
+    C4: number[]
+    Cz: number[]
+  }
+}
+```
+
+This is the EEG signal data the timeseries chart will consume. Having it typed means any component that touches this data gets autocomplete and compile-time safety rather than runtime surprises.
+
+The `api.ts` file wraps all five backend endpoints in a single `api` object with a generic `get<T>` helper. The helper handles URL construction, error extraction from FastAPI's `detail` format, and JSON parsing. Each endpoint call ends up as one line:
+
+```typescript
+getTopoplot: (dataset: string, subject: number, run: string, freqBand: 'mu' | 'beta' = 'mu') =>
+  get<TopoplotData>('/visualize/topoplot', { dataset, subject, run, freq_band: freqBand }),
+```
+
+I do think centralizing the fetch logic this way is the right call. Error handling lives in one place, and every endpoint call is one line. I do wonder if, as the project grows, we will want to add request caching or abort controllers here, but for the current scope this keeps things clean.
+
+The `.env.local` file lets the API base URL be overridden per deployment environment, which matters when moving from local development to any hosted setup on Railway or elsewhere.
 
 ---
