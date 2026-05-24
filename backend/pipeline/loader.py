@@ -55,9 +55,13 @@ def load_subject_epochs(subject: int, run_label: str):
         else:
             return None, f"Unknown run_label: {run_label}"
 
-        # MotorImagery paradigm handles bandpass filtering and epoching for us.
-        # Using 8-30 Hz to capture the Mu and Beta bands where ERD shows up.
-        paradigm = MotorImagery(events=events, n_classes=len(events), fmin=8.0, fmax=30.0)
+        # fmin=1.0/fmax=40.0 so the full PSD range (delta through beta) is available
+        # downstream. tmin=-0.5 adds a pre-cue baseline window the frontend needs.
+        paradigm = MotorImagery(
+            events=events, n_classes=len(events),
+            fmin=1.0, fmax=40.0,
+            tmin=-0.5, tmax=4.0,
+        )
         X, y, metadata = paradigm.get_data(dataset=dataset, subjects=[subject])
 
         # X comes back as (n_epochs, n_channels, n_times) in volts.
@@ -76,7 +80,11 @@ def load_subject_epochs(subject: int, run_label: str):
             ch_types="eeg",
             verbose=False,
         )
-        epochs = mne.EpochsArray(X, info, verbose=False)
+        # tmin must match the paradigm's tmin so epochs.times reflects the correct
+        # time axis (−0.5 s pre-cue through tmax). Without this, EpochsArray assumes
+        # tmin=0 and the frontend time axis is shifted by 0.5 s.
+        paradigm_tmin = paradigm.tmin if paradigm.tmin is not None else 0.0
+        epochs = mne.EpochsArray(X, info, tmin=paradigm_tmin, verbose=False)
         epochs.metadata = metadata.reset_index(drop=True)
         return epochs, None
 
