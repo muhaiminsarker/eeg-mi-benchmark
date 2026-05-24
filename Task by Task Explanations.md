@@ -20,9 +20,9 @@ A running log of what each task built and why — written in plain English, conn
 | [Task 9](#task-9-navbar-and-contextbar) | NavBar and ContextBar components | ✅ Done |
 | [Task 10](#task-10-timeserieschart) | TimeSeriesChart — Nivo, channel toggles, task shading | ✅ Done |
 | [Task 11](#task-11-psdchart) | PSDChart — Nivo, Mu/Beta band highlighting | ✅ Done |
-| Task 12 | TopoplotImage — SVG embed | ⏳ Pending |
-| Task 13 | Visualize page wiring | ⏳ Pending |
-| Task 14 | Classify and Benchmark placeholder pages | ⏳ Pending |
+| [Task 12](#task-12-topoplotimage) | TopoplotImage — SVG embed | ✅ Done |
+| [Task 13](#task-13-visualize-page-wiring) | Visualize page wiring | ✅ Done |
+| [Task 14](#task-14-placeholder-pages) | Classify and Benchmark placeholder pages | ✅ Done |
 | Task 15 | Deploy — Vercel and Railway | ⏳ Pending |
 
 ---
@@ -217,11 +217,11 @@ To me, the tmin alignment issue is the kind of thing that would have been almost
 
 ## Task 7: Frontend Scaffold
 
-For me, Task 7 is the moment the project gets a face. Everything up to this point has been data pipelines, MNE preprocessing, and a FastAPI backend. Task 7 lays down the frontend layer where a researcher will actually interact with results and see EEG visualizations rendered in a browser.
+Everything up to this point has been data pipelines, MNE preprocessing, and a FastAPI backend. Task 7 is where the project gets a face: a Next.js 14 app with the App Router, TypeScript, and the Cortex Purple design system that will carry every page from here on.
 
-The scaffold uses Next.js 14 with the App Router and TypeScript. I do think the App Router is the right call here. File-based routing means adding a `/classify` page or a `/benchmark` page later is just a matter of creating a folder, no configuration needed. TypeScript catches mismatches between what the FastAPI backend sends and what the frontend expects, which matters when you're dealing with typed EEG payloads like timeseries arrays and PSD vectors.
+The App Router choice is deliberate. File-based routing means adding a `/classify` or `/benchmark` page later is just a matter of creating a folder. TypeScript catches mismatches between what the FastAPI backend sends and what the frontend expects, which matters when you are dealing with structured EEG payloads like timeseries arrays and PSD vectors.
 
-The Tailwind configuration is where the visual identity lives. The Cortex Purple palette uses dark near-black backgrounds with violet accents:
+The Tailwind config is where the visual identity lives:
 
 ```typescript
 colors: {
@@ -232,11 +232,9 @@ colors: {
 }
 ```
 
-To me, this color system is not just aesthetic. A dark, low-stimulus UI fits the EEG context, where you might be reviewing data in a lab setting alongside actual recording equipment. High-contrast violet on near-black is also easier to read when you are scanning between a chart and a paper.
+The dark, low-stimulus palette is not just aesthetic. You might be reviewing EEG data in a lab alongside actual recording equipment, and a high-contrast violet-on-near-black scheme is easier to read when you're scanning between a chart and a paper. I do think this is the kind of design decision that is easy to dismiss as preference but actually matters for the use case.
 
-Nivo was installed for charting (`@nivo/line`, `@nivo/core`). The line chart component will carry the timeseries and PSD visualizations in Tasks 10 and 11.
-
-The Jest and Testing Library setup gives the frontend a testing foundation from the start. One thing worth noting: the plan had a typo in the Jest config, `setupFilesAfterFramework` instead of `setupFilesAfterEnv`. With the wrong key, Jest silently ignores the setup file and `@testing-library/jest-dom` matchers are unavailable in tests. That was caught and fixed before moving on.
+Nivo was installed for charting (`@nivo/line`, `@nivo/core`). One catch from this task: the plan had a typo in the Jest config, `setupFilesAfterFramework` instead of `setupFilesAfterEnv`. With the wrong key, Jest silently ignores the setup file and `@testing-library/jest-dom` matchers are unavailable in tests without any error message explaining why. That was caught and fixed here.
 
 ---
 
@@ -274,33 +272,26 @@ The `.env.local` file lets the API base URL be overridden per deployment environ
 
 ## Task 9: NavBar and ContextBar
 
-For me, the most important thing Task 9 establishes is persistent chrome: the two layout components that wrap every page in the app. The `NavBar` sits at the top of every route and gives users a clear path between Visualize, Classify, and Benchmark. It uses `usePathname()` to highlight the active link so users always know where they are:
+Task 9 is two components: the `NavBar` that wraps every route, and the `ContextBar` that drives the data selection. The NavBar is the simpler one — it uses `usePathname()` to highlight the active link, which means a user always knows where they are in the three-page structure:
 
 ```typescript
 const active = pathname.startsWith(href)
 className={active ? 'text-accent border-b border-accent pb-0.5' : 'text-text-dim hover:text-text-muted'}
 ```
 
-I do think the more interesting piece is the `ContextBar`. EEG motor imagery research involves choosing a dataset, a specific subject, and a run type before anything meaningful can be shown. The `ContextBar` puts those three selectors in one persistent strip, along with a Load button and an Explain toggle. The Explain toggle is worth noting specifically because it is the UI entry point for the interpretability layer of this project: when flipped on, downstream visualizations can show saliency maps or feature explanations alongside raw signal views.
+The ContextBar is the more interesting design problem. EEG motor imagery research always starts with the same three choices: which dataset, which subject, which run type. Those are not page-specific decisions. They apply to every visualization and every classifier run. Putting them in a persistent strip means you never re-select on navigation, and the data context stays consistent as you move between Visualize and Classify.
 
-```typescript
-<button
-  role="switch"
-  aria-label="explain"
-  aria-checked={explain}
-  onClick={() => onExplainChange(!explain)}
->
-```
+The Explain toggle is worth calling out separately. When it is on, downstream visualizations render extra captions connecting the raw signal to the neuroscience. I do think this matters for the project's purpose: it turns the app into something closer to a teaching tool rather than just a data viewer. The toggle is implemented as a proper ARIA switch with `role="switch"` and `aria-checked`, which is what makes `getByLabelText(/explain/i)` work in the tests.
 
-To me, this design makes sense because the context (which subject, which run) does not belong to any single page. It should be available everywhere without re-selecting on every navigation. I do wonder if a future iteration might want to persist this selection in URL query params so that a direct link always restores the correct data context. For now, the component is stateful and controlled, which is the right foundation to build that on later.
+I do wonder if a future iteration should persist the context selection in URL query params. Right now switching pages resets nothing, but a direct link to a specific subject and run would be useful for sharing results.
 
 ---
 
 ## Task 10: TimeSeriesChart
 
-For me, Task 10 is the piece that makes the EEG benchmark actually legible to someone who isn't already steeped in signal processing. I do think the key design decision here is the per-channel toggle: when you're looking at a motor imagery trial, you often want to isolate C3 or C4 independently to see the event-related desynchronization more clearly, rather than having all three traces stacked on top of each other competing for attention.
+When you look at a motor imagery trial, having all three EEG traces visible at once is not always what you want. The whole point of C3 and C4 is the contrast between them: one hemisphere desynchronizes while the other stays quiet, and that lateralization is what the classifier reads. So the per-channel toggle is not a nice-to-have, it is central to how someone would actually use this chart.
 
-The component builds its Nivo dataset reactively from a `visible` state object:
+The component builds its Nivo dataset reactively from a `visible` state object, so toggling a channel immediately removes it from the rendered lines:
 
 ```typescript
 const nivoData = useMemo(() =>
@@ -315,17 +306,15 @@ const nivoData = useMemo(() =>
 )
 ```
 
-The shaded region in the chart overlays the post-stimulus window, which visually anchors where imagery-period suppression should appear in C3. To me, that's worth more than a tooltip ever could be for users first encountering motor imagery EEG.
+The shaded region overlays the post-cue window (from t=0 onward), which visually anchors where the imagery period is. Without that, the chart is just a waveform with no spatial reference for when the brain response should appear.
 
-I do wonder if the `explain` prop will end up being toggled by a global tutorial mode flag or driven per-widget by the parent page. Right now it is a simple boolean passed down, which keeps the component pure and easy to test, as shown by the three passing specs: channel buttons render, caption appears when `explain={true}`, caption is absent when `explain={false}`.
-
-One infrastructural consequence of this task is the `moduleNameMapper` added to `jest.config.ts`, routing all `@nivo/*` imports to a lightweight stub during testing, since jsdom cannot execute Nivo's SVG rendering pipeline.
+One infrastructural consequence of this task was the `moduleNameMapper` added to `jest.config.ts`, routing all `@nivo/*` imports to a lightweight stub during testing. jsdom cannot execute Nivo's SVG rendering pipeline, so the mock is what makes the component tests possible at all. I do wonder if at some point we will want snapshot tests against the actual rendered SVG, but that would require a different test environment entirely.
 
 ---
 
 ## Task 11: PSDChart
 
-For me, Task 11 is one of the most neuroscientifically meaningful pieces of this whole benchmark dashboard. The PSDChart visualizes power spectral density: how much signal energy the brain is producing at each frequency. I do think that number alone tells a surprisingly complete story about motor imagery, because the oscillatory changes in the mu (8-12 Hz) and beta (13-30 Hz) bands are the core physiological signal that nearly every BCI classifier is trying to extract.
+Power spectral density is where motor imagery EEG becomes legible as a frequency-domain phenomenon. A raw timeseries tells you the voltage is fluctuating, but it does not tell you at which frequencies or by how much. The PSD does. And for motor imagery specifically, the frequencies that matter are already known from the literature: mu (8-12 Hz) and beta (13-30 Hz), both of which suppress over the contralateral motor cortex during imagined movement. I do think that knowing where to look is half the job of a good visualization, which is why the band-highlighting exists.
 
 The key design decision was rendering the band labels twice. Inside the Nivo chart, a custom SVG layer handles the shaded band regions:
 
@@ -346,5 +335,41 @@ But since Nivo is fully mocked in the test environment (returning a bare div), t
 This means the `getByText('μ')` and `getByText('β')` assertions always find something regardless of chart rendering.
 
 The `explain` prop drives a short prose caption about ERD and ERS. To me, that caption matters because the suppression of mu during imagined movement (ERD) and the rebound of beta afterward (ERS) are not obvious from looking at a curve. I do wonder whether future iterations should annotate the actual ERD/ERS windows directly on the plot rather than describing them in text, which would make the causal link between the signal and the neuroscience far more immediate.
+
+---
+
+## Task 12: TopoplotImage
+
+I do think the topoplot is the hardest visualization in this stack to get right from an embedding standpoint. The chart components in Tasks 10 and 11 both pull in Nivo and build their own SVG from data arrays. This one is different: MNE has already rendered the scalp map server-side and handed us back a complete SVG string. So the question is just how to embed it cleanly without re-rendering or losing the dark theme styling that was baked in by the backend.
+
+Using `dangerouslySetInnerHTML` is the correct answer here, but it does carry a note: this is only safe because the SVG content comes exclusively from our own FastAPI backend. If this ever became a user-upload path, that would need to change. For this project, the content is fully server-controlled, so the risk is zero.
+
+The mu/beta toggle is the other interesting piece. Those two bands suppress in the same motor cortex region during imagery, but they do not always do it at the same time or to the same degree. The beta rebound, for instance, often happens after the imagery ends rather than during it. Being able to switch between the two topoplots on the same epoch is a quick way to see that difference without needing to write any code.
+
+---
+
+## Task 13: Visualize Page Wiring
+
+This is the page that actually connects everything. The ContextBar from Task 9 drives the dataset/subject/run selection, and when the user hits Load, the page calls `loadData` to warm the server cache and then fires all three visualization requests in parallel:
+
+```typescript
+const [ts, psdData, topo] = await Promise.all([
+  api.getTimeseries(dataset, subject, run),
+  api.getPSD(dataset, subject, run, 'C3'),
+  api.getTopoplot(dataset, subject, run, freqBand),
+])
+```
+
+The parallel fetch matters because MOABB is the slow part, not the derived computations. Once the epochs are in memory, timeseries slicing, Welch PSD, and topoplot rendering are all fast, so there is no reason to wait on one before starting the next.
+
+One thing I noticed while wiring this up: the `freqBand` state lives at the page level rather than inside `TopoplotImage`. That might look like over-engineering, but it is the right call. Band selection is a property of the data context, not of the chart widget. If we later want the timeseries to highlight the same band, or the PSD to mark the active band with a different color, the state is already in the right place. To me, this is exactly the kind of decision that seems trivial now but prevents a refactor later.
+
+---
+
+## Task 14: Placeholder Pages
+
+The classify and benchmark pages are basically two lines of JSX each, but I do think they are worth explaining because the content choices are not arbitrary. Blankertz et al. 2008 is the CSP paper, and Ang et al. 2008 is the filter bank extension. Those are the papers you have to actually read before the classify implementation will make sense — not as a prerequisite for the code, but as a prerequisite for the design decisions the code is expressing. If you implement CSP without reading Blankertz, you end up with a black box. If you read it first, you understand why the spatial filter is optimizing the ratio of class variances, and that changes how you think about what the algorithm is actually doing to the signal.
+
+The same logic applies to Lotte et al. 2018 on the benchmark side. To me, embedding the citation directly in the UI is a reminder that this project is not just a pipeline but a study tool.
 
 ---
