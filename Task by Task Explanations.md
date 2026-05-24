@@ -18,7 +18,7 @@ A running log of what each task built and why — written in plain English, conn
 | [Task 7](#task-7-frontend-scaffold) | Frontend scaffold — Next.js, Tailwind, Cortex Purple | ✅ Done |
 | [Task 8](#task-8-shared-types-and-api-client) | Shared types and API client | ✅ Done |
 | [Task 9](#task-9-navbar-and-contextbar) | NavBar and ContextBar components | ✅ Done |
-| Task 10 | TimeSeriesChart — Nivo, channel toggles, task shading | ⏳ Pending |
+| [Task 10](#task-10-timeserieschart) | TimeSeriesChart — Nivo, channel toggles, task shading | ✅ Done |
 | Task 11 | PSDChart — Nivo, Mu/Beta band highlighting | ⏳ Pending |
 | Task 12 | TopoplotImage — SVG embed | ⏳ Pending |
 | Task 13 | Visualize page wiring | ⏳ Pending |
@@ -293,5 +293,32 @@ I do think the more interesting piece is the `ContextBar`. EEG motor imagery res
 ```
 
 To me, this design makes sense because the context (which subject, which run) does not belong to any single page. It should be available everywhere without re-selecting on every navigation. I do wonder if a future iteration might want to persist this selection in URL query params so that a direct link always restores the correct data context. For now, the component is stateful and controlled, which is the right foundation to build that on later.
+
+---
+
+## Task 10: TimeSeriesChart
+
+For me, Task 10 is the piece that makes the EEG benchmark actually legible to someone who isn't already steeped in signal processing. I do think the key design decision here is the per-channel toggle: when you're looking at a motor imagery trial, you often want to isolate C3 or C4 independently to see the event-related desynchronization more clearly, rather than having all three traces stacked on top of each other competing for attention.
+
+The component builds its Nivo dataset reactively from a `visible` state object:
+
+```typescript
+const nivoData = useMemo(() =>
+  (Object.keys(CHANNEL_COLORS) as ChannelName[])
+    .filter((ch) => visible[ch])
+    .map((ch) => ({
+      id: ch,
+      color: CHANNEL_COLORS[ch],
+      data: data.times.map((t, i) => ({ x: t, y: data.channels[ch][i] })),
+    })),
+  [data, visible]
+)
+```
+
+The shaded region in the chart overlays the post-stimulus window, which visually anchors where imagery-period suppression should appear in C3. To me, that's worth more than a tooltip ever could be for users first encountering motor imagery EEG.
+
+I do wonder if the `explain` prop will end up being toggled by a global tutorial mode flag or driven per-widget by the parent page. Right now it is a simple boolean passed down, which keeps the component pure and easy to test, as shown by the three passing specs: channel buttons render, caption appears when `explain={true}`, caption is absent when `explain={false}`.
+
+One infrastructural consequence of this task is the `moduleNameMapper` added to `jest.config.ts`, routing all `@nivo/*` imports to a lightweight stub during testing, since jsdom cannot execute Nivo's SVG rendering pipeline.
 
 ---

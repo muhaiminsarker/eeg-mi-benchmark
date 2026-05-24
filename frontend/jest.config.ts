@@ -7,6 +7,9 @@ const config: Config = {
   coverageProvider: 'v8',
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  moduleNameMapper: {
+    '^@nivo/(.*)$': '<rootDir>/__mocks__/nivo.tsx',
+  },
 }
 
 export default createJestConfig(config)
