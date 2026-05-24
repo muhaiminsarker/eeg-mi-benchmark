@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from routers.data import _get_epochs
-from pipeline.preprocessing import get_channel_timeseries, get_psd
+from pipeline.preprocessing import get_channel_timeseries
 
 router = APIRouter()
 
