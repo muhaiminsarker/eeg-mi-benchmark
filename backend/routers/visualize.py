@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from routers.data import _get_epochs
 from pipeline.preprocessing import get_channel_timeseries, get_psd
+from pipeline.topoplot import generate_topoplot_svg
 
 router = APIRouter()
 
@@ -69,3 +70,32 @@ def psd(
     # fmin=1.0 and fmax=40.0 to cover the full range the chart needs,
     # including delta, Mu (8-12), and Beta (13-30) bands
     return get_psd(epochs, channel, fmin=1.0, fmax=40.0)
+
+
+@router.get("/topoplot")
+def topoplot(
+    dataset: str = Query(...),
+    subject: int = Query(...),
+    run: str = Query(...),
+    freq_band: str = Query("mu"),
+):
+    """Return an MNE-rendered scalp topoplot as an SVG string.
+
+    Parameter dataset: dataset identifier
+    Precondition: dataset must be the STRING 'BNCI2014001'
+
+    Parameter subject: subject number
+    Precondition: subject must be an INT between 1 and 9
+
+    Parameter run: run label
+    Precondition: run must be a STRING, either 'imagined_hand' or 'imagined_feet'
+
+    Parameter freq_band: frequency band to visualize
+    Precondition: freq_band must be a STRING, either 'mu' or 'beta'
+    """
+    epochs = _get_epochs(subject, run)
+    try:
+        svg = generate_topoplot_svg(epochs, freq_band)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"svg": svg}

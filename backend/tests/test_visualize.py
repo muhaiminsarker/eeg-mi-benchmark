@@ -38,3 +38,16 @@ def test_psd_returns_freqs_and_power():
 def test_psd_invalid_channel():
     response = client.get("/visualize/psd", params={**PARAMS, "channel": "NOTACHANNEL"})
     assert response.status_code == 400
+
+
+def test_topoplot_returns_svg_string():
+    response = client.get("/visualize/topoplot", params={**PARAMS, "freq_band": "mu"})
+    assert response.status_code == 200
+    body = response.json()
+    assert "svg" in body
+    assert body["svg"].startswith("<svg") or "<?xml" in body["svg"]
+
+
+def test_topoplot_invalid_band():
+    response = client.get("/visualize/topoplot", params={**PARAMS, "freq_band": "notaband"})
+    assert response.status_code == 400
