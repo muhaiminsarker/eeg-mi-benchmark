@@ -24,8 +24,8 @@ def generate_topoplot_svg(epochs, freq_band: str) -> str:
 
     Raises ValueError for unknown freq_band.
 
-    Parameter epochs: MNE Epochs object with channel location info
-    Precondition: epochs must be a valid mne.EpochsArray with montage set
+    Parameter epochs: MNE Epochs object
+    Precondition: epochs must be a valid mne.EpochsArray — montage is set internally, no digitization required on input
 
     Parameter freq_band: which frequency band to visualize
     Precondition: freq_band must be a STRING, either 'mu' or 'beta'
@@ -66,7 +66,8 @@ def generate_topoplot_svg(epochs, freq_band: str) -> str:
         if hasattr(child, "set_color"):
             try:
                 child.set_color("#3a3650")
-            except Exception:
+            except (TypeError, ValueError):
+                # Some artist types reject a plain color string — just skip them
                 pass
 
     buf = io.BytesIO()
