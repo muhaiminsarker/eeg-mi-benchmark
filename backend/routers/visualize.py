@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from routers.data import _get_epochs
-from pipeline.preprocessing import get_channel_timeseries
+from pipeline.preprocessing import get_channel_timeseries, get_psd
 
 router = APIRouter()
 
@@ -37,3 +37,35 @@ def timeseries(
             detail=f"epoch_idx {epoch_idx} out of range (n_epochs={len(epochs)})"
         )
     return get_channel_timeseries(epochs, _VISUALIZE_CHANNELS, epoch_idx)
+
+
+@router.get("/psd")
+def psd(
+    dataset: str = Query(...),
+    subject: int = Query(...),
+    run: str = Query(...),
+    channel: str = Query("C3"),
+):
+    """Return power spectral density for one channel, averaged across epochs.
+
+    Parameter dataset: dataset identifier
+    Precondition: dataset must be the STRING 'BNCI2014001'
+
+    Parameter subject: subject number
+    Precondition: subject must be an INT between 1 and 9
+
+    Parameter run: run label
+    Precondition: run must be a STRING, either 'imagined_hand' or 'imagined_feet'
+
+    Parameter channel: EEG channel name to compute PSD for
+    Precondition: channel must be a STRING that exists in the dataset's channel list
+    """
+    epochs = _get_epochs(subject, run)
+    if channel not in epochs.ch_names:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Channel '{channel}' not found. Available: {epochs.ch_names}"
+        )
+    # fmin=1.0 and fmax=40.0 to cover the full range the chart needs,
+    # including delta, Mu (8-12), and Beta (13-30) bands
+    return get_psd(epochs, channel, fmin=1.0, fmax=40.0)
