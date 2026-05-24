@@ -8,6 +8,7 @@ router = APIRouter()
 _cache: dict[tuple, object] = {}
 
 
+# Imported by visualize.py as well, since both routers share the same in-process cache
 def _get_epochs(subject: int, run_label: str):
     """Load epochs for a subject/run combo, using cache if already loaded.
 
@@ -55,6 +56,9 @@ def load_data(
     """
     if dataset != "BNCI2014001":
         raise HTTPException(status_code=400, detail=f"Unknown dataset: {dataset}")
+    valid_runs = [opt["value"] for opt in get_run_options()]
+    if run not in valid_runs:
+        raise HTTPException(status_code=400, detail=f"Unknown run: {run}. Valid options: {valid_runs}")
     epochs = _get_epochs(subject, run)
     return {
         "n_epochs": len(epochs),

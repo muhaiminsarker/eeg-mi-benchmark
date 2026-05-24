@@ -34,3 +34,12 @@ def test_load_returns_metadata():
     assert "tmax" in body
     assert "channels" in body
     assert "C3" in body["channels"]
+
+
+def test_load_invalid_run_returns_400():
+    response = client.get("/data/load", params={
+        "dataset": "BNCI2014001",
+        "subject": 1,
+        "run": "imagined_tongue",
+    })
+    assert response.status_code == 400
