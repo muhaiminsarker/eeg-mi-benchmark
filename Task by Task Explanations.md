@@ -17,7 +17,7 @@ A running log of what each task built and why — written in plain English, conn
 | [Loader Fix](#loader-fix-frequency-range-epoch-window-and-tmin-alignment) | Fix paradigm fmin/fmax, tmin/tmax, and EpochsArray time axis | ✅ Done |
 | [Task 7](#task-7-frontend-scaffold) | Frontend scaffold — Next.js, Tailwind, Cortex Purple | ✅ Done |
 | [Task 8](#task-8-shared-types-and-api-client) | Shared types and API client | ✅ Done |
-| Task 9 | NavBar and ContextBar components | ⏳ Pending |
+| [Task 9](#task-9-navbar-and-contextbar) | NavBar and ContextBar components | ✅ Done |
 | Task 10 | TimeSeriesChart — Nivo, channel toggles, task shading | ⏳ Pending |
 | Task 11 | PSDChart — Nivo, Mu/Beta band highlighting | ⏳ Pending |
 | Task 12 | TopoplotImage — SVG embed | ⏳ Pending |
@@ -269,5 +269,29 @@ getTopoplot: (dataset: string, subject: number, run: string, freqBand: 'mu' | 'b
 I do think centralizing the fetch logic this way is the right call. Error handling lives in one place, and every endpoint call is one line. I do wonder if, as the project grows, we will want to add request caching or abort controllers here, but for the current scope this keeps things clean.
 
 The `.env.local` file lets the API base URL be overridden per deployment environment, which matters when moving from local development to any hosted setup on Railway or elsewhere.
+
+---
+
+## Task 9: NavBar and ContextBar
+
+For me, the most important thing Task 9 establishes is persistent chrome: the two layout components that wrap every page in the app. The `NavBar` sits at the top of every route and gives users a clear path between Visualize, Classify, and Benchmark. It uses `usePathname()` to highlight the active link so users always know where they are:
+
+```typescript
+const active = pathname.startsWith(href)
+className={active ? 'text-accent border-b border-accent pb-0.5' : 'text-text-dim hover:text-text-muted'}
+```
+
+I do think the more interesting piece is the `ContextBar`. EEG motor imagery research involves choosing a dataset, a specific subject, and a run type before anything meaningful can be shown. The `ContextBar` puts those three selectors in one persistent strip, along with a Load button and an Explain toggle. The Explain toggle is worth noting specifically because it is the UI entry point for the interpretability layer of this project: when flipped on, downstream visualizations can show saliency maps or feature explanations alongside raw signal views.
+
+```typescript
+<button
+  role="switch"
+  aria-label="explain"
+  aria-checked={explain}
+  onClick={() => onExplainChange(!explain)}
+>
+```
+
+To me, this design makes sense because the context (which subject, which run) does not belong to any single page. It should be available everywhere without re-selecting on every navigation. I do wonder if a future iteration might want to persist this selection in URL query params so that a direct link always restores the correct data context. For now, the component is stateful and controlled, which is the right foundation to build that on later.
 
 ---
