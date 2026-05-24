@@ -19,7 +19,7 @@ A running log of what each task built and why — written in plain English, conn
 | [Task 8](#task-8-shared-types-and-api-client) | Shared types and API client | ✅ Done |
 | [Task 9](#task-9-navbar-and-contextbar) | NavBar and ContextBar components | ✅ Done |
 | [Task 10](#task-10-timeserieschart) | TimeSeriesChart — Nivo, channel toggles, task shading | ✅ Done |
-| Task 11 | PSDChart — Nivo, Mu/Beta band highlighting | ⏳ Pending |
+| [Task 11](#task-11-psdchart) | PSDChart — Nivo, Mu/Beta band highlighting | ✅ Done |
 | Task 12 | TopoplotImage — SVG embed | ⏳ Pending |
 | Task 13 | Visualize page wiring | ⏳ Pending |
 | Task 14 | Classify and Benchmark placeholder pages | ⏳ Pending |
@@ -320,5 +320,31 @@ The shaded region in the chart overlays the post-stimulus window, which visually
 I do wonder if the `explain` prop will end up being toggled by a global tutorial mode flag or driven per-widget by the parent page. Right now it is a simple boolean passed down, which keeps the component pure and easy to test, as shown by the three passing specs: channel buttons render, caption appears when `explain={true}`, caption is absent when `explain={false}`.
 
 One infrastructural consequence of this task is the `moduleNameMapper` added to `jest.config.ts`, routing all `@nivo/*` imports to a lightweight stub during testing, since jsdom cannot execute Nivo's SVG rendering pipeline.
+
+---
+
+## Task 11: PSDChart
+
+For me, Task 11 is one of the most neuroscientifically meaningful pieces of this whole benchmark dashboard. The PSDChart visualizes power spectral density: how much signal energy the brain is producing at each frequency. I do think that number alone tells a surprisingly complete story about motor imagery, because the oscillatory changes in the mu (8-12 Hz) and beta (13-30 Hz) bands are the core physiological signal that nearly every BCI classifier is trying to extract.
+
+The key design decision was rendering the band labels twice. Inside the Nivo chart, a custom SVG layer handles the shaded band regions:
+
+```tsx
+({ xScale, innerHeight }: any) => (
+  <BandLayer xScale={xScale} innerHeight={innerHeight}
+    fmin={8} fmax={12} color="#a78bfa" label="μ" />
+),
+```
+
+But since Nivo is fully mocked in the test environment (returning a bare div), those SVG layers never execute. So the band labels also live as plain HTML in a legend row above the chart:
+
+```tsx
+<span style={{ color: '#a78bfa' }}>μ <span className="text-text-muted font-sans">8-12 Hz</span></span>
+<span style={{ color: '#7c6fff' }}>β <span className="text-text-muted font-sans">13-30 Hz</span></span>
+```
+
+This means the `getByText('μ')` and `getByText('β')` assertions always find something regardless of chart rendering.
+
+The `explain` prop drives a short prose caption about ERD and ERS. To me, that caption matters because the suppression of mu during imagined movement (ERD) and the rebound of beta afterward (ERS) are not obvious from looking at a curve. I do wonder whether future iterations should annotate the actual ERD/ERS windows directly on the plot rather than describing them in text, which would make the causal link between the signal and the neuroscience far more immediate.
 
 ---
