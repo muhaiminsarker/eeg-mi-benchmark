@@ -1,11 +1,34 @@
+import threading
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routers import data, visualize, classify, benchmark
 
-app = FastAPI(title="eeg-mi-benchmark", version="0.1.0")
 
-# GET-only — the API is read-only, so restricting methods is free security
+def _warm_cache() -> None:
+    """Background thread: preload subject 1 (both run types) at startup.
+
+    This ensures the first real user request hits the cache instead of waiting
+    for the 45 s MOABB load (or ~1 s npz load).
+    """
+    from routers.data import _get_epochs
+    for run in ("imagined_hand", "imagined_feet"):
+        try:
+            _get_epochs(1, run)
+        except Exception:
+            pass  # don't crash the server if preloading fails
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    threading.Thread(target=_warm_cache, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="eeg-mi-benchmark", version="0.1.0", lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "https://*.vercel.app"],

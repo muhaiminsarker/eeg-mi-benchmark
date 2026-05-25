@@ -27,4 +27,10 @@ export const api = {
 
   getTopoplot: (dataset: string, subject: number, run: string, freqBand: 'mu' | 'beta' = 'mu') =>
     get<TopoplotData>('/visualize/topoplot', { dataset, subject, run, freq_band: freqBand }),
+
+  getPSDMulti: (dataset: string, subject: number, run: string, channels = 'C3,C4,Cz') =>
+    get<{ freqs: number[]; channels: Record<string, number[]> }>('/visualize/psd_multi', { dataset, subject, run, channels }),
+
+  getLabels: (dataset: string, subject: number, run: string) =>
+    get<{ labels: string[] }>('/data/labels', { dataset, subject, run }),
 }

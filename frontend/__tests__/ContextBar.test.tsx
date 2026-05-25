@@ -1,20 +1,24 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import ContextBar from '@/components/layout/ContextBar'
-import type { DataOptions } from '@/lib/types'
+import type { AppOptions } from '@/app/visualize/page'
 
-const mockOptions: DataOptions = {
+const mockOptions: AppOptions = {
   datasets: [{ value: 'BNCI2014001', label: 'BCI Competition IV 2a' }],
-  subjects: [1, 2, 3],
-  runs: [
-    { value: 'imagined_hand', label: 'Imagined Left / Right Hand' },
-    { value: 'imagined_feet', label: 'Imagined Feet' },
-  ],
+  subjects: { BNCI2014001: [1, 2, 3] },
+  runs: {
+    BNCI2014001: [
+      { value: 'imagined_hand', label: 'Imagined Left / Right Hand' },
+      { value: 'imagined_feet', label: 'Imagined Feet' },
+    ],
+  },
 }
 
 it('renders explain toggle', () => {
   render(
     <ContextBar
       options={mockOptions}
+      loaded={null}
+      loading={false}
       explain={false}
       onExplainChange={jest.fn()}
       onLoad={jest.fn()}
@@ -28,6 +32,8 @@ it('calls onExplainChange when toggle is clicked', () => {
   render(
     <ContextBar
       options={mockOptions}
+      loaded={null}
+      loading={false}
       explain={false}
       onExplainChange={onExplainChange}
       onLoad={jest.fn()}

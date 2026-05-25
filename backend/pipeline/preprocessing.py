@@ -22,10 +22,15 @@ def get_channel_timeseries(epochs, channels: list[str], epoch_idx: int = 0) -> d
     picks = mne.pick_channels(epochs.ch_names, include=channels, ordered=True)
     data = epoch.get_data(picks=picks)[0]
 
+    class_label = ''
+    if epochs.metadata is not None and 'labels' in epochs.metadata.columns:
+        class_label = str(epochs.metadata.iloc[epoch_idx]['labels'])
+
     # Multiply by 1e6 to convert from volts to microvolts for the chart
     return {
         "times": times,
         "channels": {ch: (data[i] * 1e6).tolist() for i, ch in enumerate(channels)},
+        "class_label": class_label,
     }
 
 
@@ -56,3 +61,36 @@ def get_psd(epochs, channel: str, fmin: float = 1.0, fmax: float = 40.0) -> dict
     power_uv2 = psd.get_data().mean(axis=0)[0]
     power_db = (10 * np.log10(power_uv2 * 1e12)).tolist()
     return {"freqs": freqs, "power": power_db}
+
+
+def get_psd_multi(epochs, channels: list[str], fmin: float = 1.0, fmax: float = 40.0) -> dict:
+    """Compute mean PSD across epochs for multiple channels in a single MNE call.
+
+    Returns a dict with 'freqs' (Hz) and 'channels' mapping channel name to
+    power array (dB re 1 uV^2/Hz). One MNE compute_psd call is cheaper than
+    N sequential calls when N channels are needed simultaneously.
+
+    Parameter epochs: MNE Epochs object
+    Precondition: epochs must be a valid mne.EpochsArray or mne.Epochs
+
+    Parameter channels: channel names to compute PSD for
+    Precondition: channels must be a list of STRINGs that exist in epochs.ch_names
+
+    Parameter fmin: lower frequency bound in Hz
+    Precondition: fmin must be a FLOAT >= 0
+
+    Parameter fmax: upper frequency bound in Hz
+    Precondition: fmax must be a FLOAT > fmin
+    """
+    picks = mne.pick_channels(epochs.ch_names, include=channels, ordered=True)
+    psd = epochs.compute_psd(method="welch", fmin=fmin, fmax=fmax, picks=picks, verbose=False)
+    freqs = psd.freqs.tolist()
+
+    # psd.get_data() shape: (n_epochs, n_channels, n_freqs)
+    # Mean over epochs → (n_channels, n_freqs)
+    mean_data = psd.get_data().mean(axis=0)
+    result: dict[str, list] = {}
+    for i, ch in enumerate(channels):
+        power_uv2 = mean_data[i]
+        result[ch] = (10 * np.log10(power_uv2 * 1e12)).tolist()
+    return {"freqs": freqs, "channels": result}

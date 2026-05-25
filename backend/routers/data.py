@@ -37,6 +37,30 @@ def get_options():
     }
 
 
+@router.get("/labels")
+def get_labels(
+    dataset: str = Query(...),
+    subject: int = Query(...),
+    run: str = Query(...),
+):
+    """Return class label for every epoch in the loaded session.
+
+    Parameter dataset: dataset identifier
+    Precondition: dataset must be the STRING 'BNCI2014001'
+
+    Parameter subject: subject number
+    Precondition: subject must be an INT between 1 and 9
+
+    Parameter run: run label
+    Precondition: run must be a STRING, either 'imagined_hand' or 'imagined_feet'
+    """
+    epochs = _get_epochs(subject, run)
+    labels: list[str] = []
+    if epochs.metadata is not None and 'labels' in epochs.metadata.columns:
+        labels = epochs.metadata['labels'].tolist()
+    return {"labels": labels}
+
+
 @router.get("/load")
 def load_data(
     dataset: str = Query(...),

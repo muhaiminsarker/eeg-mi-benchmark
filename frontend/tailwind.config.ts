@@ -19,8 +19,11 @@ const config: Config = {
         'text-dim': '#3a3650',
       },
       fontFamily: {
-        mono: ['var(--font-geist-mono)', 'monospace'],
-        sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'monospace'],
+        sans: ['var(--font-mono)', 'monospace'],
+      },
+      boxShadow: {
+        load: '0 0 12px rgba(167, 139, 250, 0.4)',
       },
     },
   },

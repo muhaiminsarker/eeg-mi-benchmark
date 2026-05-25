@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from routers.data import _get_epochs
-from pipeline.preprocessing import get_channel_timeseries, get_psd
+from pipeline.preprocessing import get_channel_timeseries, get_psd, get_psd_multi
 from pipeline.topoplot import generate_topoplot_svg
 
 router = APIRouter()
@@ -70,6 +70,25 @@ def psd(
     # fmin=1.0 and fmax=40.0 to cover the full range the chart needs,
     # including delta, Mu (8-12), and Beta (13-30) bands
     return get_psd(epochs, channel, fmin=1.0, fmax=40.0)
+
+
+@router.get("/psd_multi")
+def psd_multi(
+    dataset: str = Query(...),
+    subject: int = Query(...),
+    run: str = Query(...),
+    channels: str = Query("C3,C4,Cz"),
+):
+    """Return PSD for multiple channels in one call.
+
+    Parameter channels: comma-separated channel names, e.g. 'C3,C4,Cz'
+    """
+    epochs = _get_epochs(subject, run)
+    ch_list = [c.strip() for c in channels.split(",")]
+    for ch in ch_list:
+        if ch not in epochs.ch_names:
+            raise HTTPException(status_code=400, detail=f"Channel '{ch}' not found.")
+    return get_psd_multi(epochs, ch_list, fmin=1.0, fmax=40.0)
 
 
 @router.get("/topoplot")

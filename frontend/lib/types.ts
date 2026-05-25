@@ -19,11 +19,13 @@ export interface TimeseriesData {
     C4: number[]
     Cz: number[]
   }
+  class_label?: string
 }
 
 export interface PSDData {
   freqs: number[]
   power: number[]
+  channel?: string
 }
 
 export interface TopoplotData {
