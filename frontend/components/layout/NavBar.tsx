@@ -16,7 +16,7 @@ export default function NavBar() {
 
   if (slot) {
     return (
-      <header className="nav" style={{ padding: 0, overflow: 'hidden' }}>
+      <header className="nav" style={{ padding: 0, overflow: 'visible' }}>
         {slot}
       </header>
     )

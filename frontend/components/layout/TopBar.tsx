@@ -126,7 +126,7 @@ export default function TopBar({ options, loaded, loading, explain, onExplainCha
     : null
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', width: '100%', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', alignItems: 'center', width: '100%', height: '100%', overflow: 'visible' }}>
       <div className="wordmark" style={{ marginRight: 14, flexShrink: 0 }}>
         <span className="wordmark-name">MI·Bench</span>
       </div>
