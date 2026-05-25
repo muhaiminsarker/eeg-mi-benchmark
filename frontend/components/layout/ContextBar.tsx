@@ -55,7 +55,7 @@ function Dropdown({ label, value, options, onChange, width = 168, disabled = fal
         {label}
       </div>
       <button onClick={() => !disabled && setOpen((o) => !o)} disabled={disabled} className="dropdown-btn" style={{ width }}>
-        <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {current?.label ?? value}
         </span>
         <ChevronIcon open={open} />
@@ -120,7 +120,7 @@ export default function ContextBar({ options, loaded, loading, explain, onExplai
         <div style={{ flex: 1 }} />
 
         {/* Explain toggle with tooltip */}
-        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+        <div style={{ position: 'relative' }}>
           <label className="toggle" title="Show plain-language explanations below each chart">
             <input type="checkbox" checked={explain} onChange={(e) => onExplainChange(e.target.checked)} />
             <span className="toggle-slider" />
@@ -133,8 +133,8 @@ export default function ContextBar({ options, loaded, loading, explain, onExplai
               Explain charts
             </span>
           </label>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.03em' }}>
-            {explain ? 'explanations visible' : 'what am I looking at?'}
+          <span style={{ position: 'absolute', top: '100%', right: 0, marginTop: 3, fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
+            {explain ? 'hints on' : 'hints off'}
           </span>
         </div>
       </div>

@@ -259,8 +259,8 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
   display: flex; justify-content: space-between; align-items: center;
   padding: 6px 10px;
   border-radius: 6px;
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--sans);
+  font-size: 13px;
   color: var(--text-dim);
   text-align: left;
 }

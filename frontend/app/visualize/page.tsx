@@ -24,12 +24,21 @@ export interface LoadedMeta {
   classes: string[]
 }
 
+const RUN_LABELS: Record<string, string> = {
+  imagined_hand:   'Imagined Left / Right Hand',
+  imagined_feet:   'Imagined Feet',
+  imagined_tongue: 'Imagined Tongue',
+}
+
 function mockToApp(m: MOCK.MockOptions): AppOptions {
   return {
     datasets: m.datasets.map((id) => ({ value: id, label: id })),
     subjects: m.subjects,
     runs: Object.fromEntries(
-      Object.entries(m.runs).map(([ds, rs]) => [ds, rs.map((r) => ({ value: r, label: r }))])
+      Object.entries(m.runs).map(([ds, rs]) => [
+        ds,
+        rs.map((r) => ({ value: r, label: RUN_LABELS[r] ?? r })),
+      ])
     ),
   }
 }
@@ -193,12 +202,11 @@ function EpochStrip({ labels, current, onSelect }: { labels: string[]; current: 
       </div>
       <div style={{
         display: 'flex',
-        gap: 2,
+        gap: 0,
         flexWrap: 'nowrap',
-        overflowX: 'auto',
+        overflow: 'hidden',
         padding: '3px 0 6px',
         cursor: 'pointer',
-        scrollbarWidth: 'thin',
       }}>
         {labels.map((label, i) => {
           const isCurrent = i === current
@@ -209,16 +217,15 @@ function EpochStrip({ labels, current, onSelect }: { labels: string[]; current: 
               title={`Click to jump · Epoch ${i + 1}: ${label.replace('_', ' ')}`}
               onClick={() => onSelect(i)}
               style={{
-                width: isCurrent ? 8 : 4,
-                minWidth: isCurrent ? 8 : 4,
+                flex: isCurrent ? '2 1 0' : '1 1 0',
+                minWidth: isCurrent ? 4 : 2,
                 height: 32,
-                borderRadius: 2,
+                borderRadius: 1,
                 background: color,
                 opacity: isCurrent ? 1 : 0.3,
-                transition: 'opacity 0.1s, width 0.12s',
+                transition: 'opacity 0.1s, flex 0.12s',
                 outline: isCurrent ? `2px solid ${color}` : 'none',
                 outlineOffset: 1,
-                flexShrink: 0,
               }}
             />
           )

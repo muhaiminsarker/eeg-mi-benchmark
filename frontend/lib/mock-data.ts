@@ -73,6 +73,8 @@ function lerpColor(a: number[], b: number[], t: number): number[] {
   return a.map((v, i) => Math.round(v + (b[i] - v) * t))
 }
 
+const _BNCI2014001_RUNS = ['imagined_hand', 'imagined_feet', 'imagined_tongue']
+
 export function options(): MockOptions {
   return {
     datasets: DATASETS.map((d) => d.id),
@@ -82,7 +84,9 @@ export function options(): MockOptions {
     runs: Object.fromEntries(
       DATASETS.map((d) => [
         d.id,
-        Array.from({ length: d.runs }, (_, i) => `run-${String(i + 1).padStart(2, '0')}`),
+        d.id === 'BNCI2014001'
+          ? _BNCI2014001_RUNS
+          : Array.from({ length: d.runs }, (_, i) => `run-${String(i + 1).padStart(2, '0')}`),
       ])
     ),
   }
