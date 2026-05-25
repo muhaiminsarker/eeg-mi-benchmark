@@ -151,11 +151,11 @@ export default function TimeSeriesChart({ data, height = 280 }: Props) {
           </text>
         )}
 
-        {/* ERD label */}
+        {/* imagery window label */}
         {erdEnd > erdStart && (
           <text x={(xScale(erdStart) + xScale(erdEnd)) / 2} y={M.top + 12}
             textAnchor="middle" fontSize="9" fontFamily="var(--mono)" fill={C.cueLine} opacity="0.8">
-            ERD
+            imagery
           </text>
         )}
 
@@ -236,7 +236,7 @@ export default function TimeSeriesChart({ data, height = 280 }: Props) {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, color: 'var(--text-dim)', fontSize: 10 }}>
           <span>
             <span style={{ display: 'inline-block', width: 10, height: 10, background: C.erdBand, border: '1px solid rgba(167,139,250,0.3)', marginRight: 4, verticalAlign: 'middle' }} />
-            ERD window
+            imagery window
           </span>
           {hover && <span style={{ color: 'var(--text)' }}>t = {hover.t.toFixed(3)} s</span>}
         </div>

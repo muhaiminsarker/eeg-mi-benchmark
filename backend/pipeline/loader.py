@@ -23,6 +23,7 @@ from moabb.paradigms import MotorImagery
 _RUN_OPTIONS = [
     {"value": "imagined_hand", "label": "Imagined Left / Right Hand"},
     {"value": "imagined_feet", "label": "Imagined Feet"},
+    {"value": "imagined_tongue", "label": "Imagined Tongue"},
 ]
 
 _BNCI2014_001_CHANNELS = [
@@ -38,6 +39,7 @@ _SFREQ = 250.0
 _RUN_EVENTS = {
     "imagined_hand": ["left_hand", "right_hand"],
     "imagined_feet": ["feet"],
+    "imagined_tongue": ["tongue"],
 }
 
 

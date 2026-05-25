@@ -42,6 +42,7 @@ _SUBJECTS = list(range(1, 10))  # subjects 1-9 (all subjects in BNCI2014_001)
 _RUNS = {
     "imagined_hand": ["left_hand", "right_hand"],
     "imagined_feet": ["feet"],
+    "imagined_tongue": ["tongue"],
 }
 
 

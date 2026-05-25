@@ -1,77 +1,98 @@
 import io
 import matplotlib
-# Must set non-interactive backend before importing pyplot, otherwise it tries to open a display
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import numpy as np
 import mne
 
-# Frequency bands for the topoplot selector. Got these ranges from the standard BCI literature.
 _BANDS = {
-    "mu": (8.0, 12.0),
-    "beta": (13.0, 30.0),
+    "mu":        (8.0,  12.0),
+    "beta":      (13.0, 30.0),
+    "alpha":     (8.0,  13.0),
+    "broadband": (1.0,  40.0),
 }
 
-# Cortex Purple theme colors, matched to the frontend design spec
-_BG = "#09090f"
+_BG = "#0d0c18"
+_HEAD_COLOR = "#4a5568"
+_SENSOR_COLOR = "#94a3b8"
 
 
 def generate_topoplot_svg(epochs, freq_band: str) -> str:
-    """Render a scalp topoplot for the mean PSD in freq_band, returned as an SVG string.
+    """Render a scalp topoplot for the mean PSD in freq_band, returned as SVG.
 
-    MNE renders the topoplot server-side because there is no equivalent React library
-    that handles EEG electrode layouts properly. We serve it as SVG so the frontend
-    can embed it without any additional rendering step.
+    Uses RdBu_r centered at mean power so motor-cortex channels (C3/C4) stand
+    out spatially against the rest of the scalp. No electrode labels shown —
+    the spatial pattern is the signal, not the channel names.
 
     Raises ValueError for unknown freq_band.
-
-    Parameter epochs: MNE Epochs object
-    Precondition: epochs must be a valid mne.EpochsArray — montage is set internally, no digitization required on input
-
-    Parameter freq_band: which frequency band to visualize
-    Precondition: freq_band must be a STRING, either 'mu' or 'beta'
     """
     if freq_band not in _BANDS:
         raise ValueError(f"Unknown freq_band '{freq_band}'. Valid: {list(_BANDS)}")
 
     fmin, fmax = _BANDS[freq_band]
 
-    # MOABB-loaded epochs don't carry digitization points, so plot_topomap has no
-    # electrode coordinates to work with. Setting standard_1020 here gives MNE the
-    # 3-D positions it needs to project channels onto the scalp. Used on_missing='warn'
-    # so channels absent from the standard layout don't crash the call.
     montage = mne.channels.make_standard_montage("standard_1020")
     epochs_copy = epochs.copy()
     epochs_copy.set_montage(montage, on_missing="warn", verbose=False)
 
-    # Compute mean power per channel across all epochs and frequency bins in the band
     psd = epochs_copy.compute_psd(method="welch", fmin=fmin, fmax=fmax, verbose=False)
-    power = psd.get_data().mean(axis=(0, 2))
+    power = psd.get_data().mean(axis=(0, 2))  # (n_channels,)
 
-    fig, ax = plt.subplots(figsize=(3.5, 3.5), facecolor=_BG)
+    # Center the diverging colormap at the mean so spatial deviations are clear
+    mean_p = power.mean()
+    max_dev = np.abs(power - mean_p).max() or 1.0
+    vlim = (mean_p - max_dev, mean_p + max_dev)
+
+    plt.rcParams.update({
+        "text.color": _SENSOR_COLOR,
+        "axes.labelcolor": _SENSOR_COLOR,
+        "xtick.color": _SENSOR_COLOR,
+        "ytick.color": _SENSOR_COLOR,
+    })
+
+    fig, ax = plt.subplots(figsize=(4.2, 4.2), facecolor=_BG)
     ax.set_facecolor(_BG)
+    ax.axis("off")
 
     mne.viz.plot_topomap(
         power,
         epochs_copy.info,
         axes=ax,
         show=False,
-        cmap="PuRd",
+        cmap="RdBu_r",
         sensors=True,
-        names=epochs_copy.ch_names,
+        names=None,
         outlines="head",
+        vlim=vlim,
+        sphere=0.09,
     )
 
-    # Style head outline and sensor dots to match the dark theme
-    for child in ax.get_children():
-        if hasattr(child, "set_color"):
-            try:
-                child.set_color("#3a3650")
-            except (TypeError, ValueError):
-                # Some artist types reject a plain color string — just skip them
-                pass
+    # Style head outline and sensor markers for dark background
+    for line in ax.get_lines():
+        line.set_color(_HEAD_COLOR)
+        line.set_linewidth(1.8)
+        line.set_zorder(5)
+
+    for coll in ax.collections:
+        try:
+            coll.set_edgecolors(_SENSOR_COLOR)
+            coll.set_linewidths(0.8)
+        except Exception:
+            pass
+
+    # Minimal colorbar
+    sm = plt.cm.ScalarMappable(cmap="RdBu_r", norm=mcolors.Normalize(vmin=vlim[0], vmax=vlim[1]))
+    sm.set_array([])
+    cb = fig.colorbar(sm, ax=ax, fraction=0.035, pad=0.02, shrink=0.7)
+    cb.ax.yaxis.set_tick_params(color=_SENSOR_COLOR, labelsize=8)
+    cb.outline.set_edgecolor("#334155")
+    plt.setp(cb.ax.yaxis.get_ticklabels(), color=_SENSOR_COLOR)
+    cb.set_label("dB", color=_SENSOR_COLOR, fontsize=9)
 
     buf = io.BytesIO()
-    fig.savefig(buf, format="svg", facecolor=_BG, bbox_inches="tight", pad_inches=0.1)
+    fig.savefig(buf, format="svg", facecolor=_BG, bbox_inches="tight", pad_inches=0.05, dpi=120)
     plt.close(fig)
+    plt.rcParams.update(plt.rcParamsDefault)
     buf.seek(0)
     return buf.read().decode("utf-8")

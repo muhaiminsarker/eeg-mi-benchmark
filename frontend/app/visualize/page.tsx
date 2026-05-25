@@ -37,6 +37,7 @@ function mockToApp(m: MOCK.MockOptions): AppOptions {
 function inferClasses(run: string): string[] {
   if (run === 'imagined_hand') return ['left_hand', 'right_hand']
   if (run === 'imagined_feet') return ['feet']
+  if (run === 'imagined_tongue') return ['tongue']
   return []
 }
 
@@ -192,11 +193,12 @@ function EpochStrip({ labels, current, onSelect }: { labels: string[]; current: 
       </div>
       <div style={{
         display: 'flex',
-        gap: 1.5,
+        gap: 2,
         flexWrap: 'nowrap',
         overflowX: 'auto',
-        padding: '2px 0 4px',
+        padding: '3px 0 6px',
         cursor: 'pointer',
+        scrollbarWidth: 'thin',
       }}>
         {labels.map((label, i) => {
           const isCurrent = i === current
@@ -204,17 +206,17 @@ function EpochStrip({ labels, current, onSelect }: { labels: string[]; current: 
           return (
             <div
               key={i}
-              title={`Epoch ${i + 1}: ${label.replace('_', ' ')}`}
+              title={`Click to jump · Epoch ${i + 1}: ${label.replace('_', ' ')}`}
               onClick={() => onSelect(i)}
               style={{
-                width: isCurrent ? 5 : 3,
-                minWidth: isCurrent ? 5 : 3,
-                height: 20,
-                borderRadius: 1.5,
+                width: isCurrent ? 8 : 4,
+                minWidth: isCurrent ? 8 : 4,
+                height: 32,
+                borderRadius: 2,
                 background: color,
-                opacity: isCurrent ? 1 : 0.35,
-                transition: 'opacity 0.1s, width 0.1s',
-                outline: isCurrent ? `1.5px solid ${color}` : 'none',
+                opacity: isCurrent ? 1 : 0.3,
+                transition: 'opacity 0.1s, width 0.12s',
+                outline: isCurrent ? `2px solid ${color}` : 'none',
                 outlineOffset: 1,
                 flexShrink: 0,
               }}
@@ -245,6 +247,7 @@ export default function VisualizePage() {
   const [psdChannel, setPsdChannel] = useState('C3')
   const [freqBand, setFreqBand] = useState('mu')
   const [playing, setPlaying] = useState(false)
+  const [playSpeed, setPlaySpeed] = useState<'slow' | 'normal' | 'fast'>('normal')
 
   const [tsData, setTsData] = useState<TimeseriesData | null>(null)
   const [psdData, setPsdData] = useState<PSDData | null>(null)
@@ -368,7 +371,9 @@ export default function VisualizePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded])
 
-  // Auto-play: advance one epoch every 1.5s
+  const PLAY_MS = { slow: 1200, normal: 500, fast: 150 }
+
+  // Auto-play: advance one epoch at the chosen speed
   useEffect(() => {
     if (!playing || !loaded) return
     const timer = setInterval(() => {
@@ -379,10 +384,10 @@ export default function VisualizePage() {
         }
         return i + 1
       })
-    }, 1500)
+    }, PLAY_MS[playSpeed])
     return () => clearInterval(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, loaded])
+  }, [playing, loaded, playSpeed])
 
   // When epoch changes
   useEffect(() => {
@@ -429,7 +434,7 @@ export default function VisualizePage() {
       ? 'Feet motor imagery cue at t = 0. ERD concentrates around Cz — foot motor cortex sits on the medial wall, so the central midline channel shows the strongest mu suppression.'
       : 'Motor imagery epoch. Baseline from −0.5 s pre-cue to cue onset. Imagery window runs 0–4 s. C3 and C4 cover contralateral motor cortex for right and left hand; Cz is the midline reference for feet.'
 
-  const psdExplain = `Power spectral density for C3, C4, and Cz averaged across all ${loaded?.n_epochs ?? ''} epochs. The μ (8–13 Hz) and β (13–30 Hz) motor bands are highlighted — the highlighted channel (${psdChannel}) is shown in full color. Compare C3 vs C4 lateralization in the mu band.`
+  const psdExplain = `This chart shows how much signal power exists at each frequency, averaged across all ${loaded?.n_epochs ?? ''} trials. Think of it like an audio equalizer for brain waves — instead of bass and treble, we track motor rhythms. The μ band (8–13 Hz) is the brain's natural "idle" motor rhythm: it dips when you imagine movement (that dip is the ERD this benchmark detects). The β band (13–30 Hz) is a faster motor rhythm that rebounds strongly after imagery. The frequency axis stops at 40 Hz because motor imagery signals live below that — higher frequencies are mostly noise or muscle artifact. Compare C3 vs C4: if one dips more than the other, the brain is showing lateralized motor activity, which is the key feature classifiers exploit.`
 
   const topoExplain =
     freqBand === 'mu'
@@ -520,7 +525,7 @@ export default function VisualizePage() {
                 <button
                   className="icon-btn"
                   onClick={() => setPlaying((p) => !p)}
-                  title={playing ? 'Pause (Space)' : 'Auto-play epochs'}
+                  title={playing ? 'Pause' : 'Auto-play epochs'}
                   style={{ color: playing ? 'var(--accent)' : undefined }}
                 >
                   {playing
@@ -535,6 +540,13 @@ export default function VisualizePage() {
                   title="Next epoch (→)">
                   <ArrowIcon />
                 </button>
+                <div style={{ width: 1, height: 16, background: 'var(--border)', margin: '0 2px' }} />
+                {(['slow', 'normal', 'fast'] as const).map((s) => (
+                  <button key={s} className={'pill' + (playSpeed === s ? ' active' : '')} onClick={() => setPlaySpeed(s)}
+                    title={s === 'slow' ? '1.2 s/epoch' : s === 'normal' ? '0.5 s/epoch' : '0.15 s/epoch'}>
+                    {s === 'slow' ? '0.5×' : s === 'normal' ? '1×' : '3×'}
+                  </button>
+                ))}
               </div>
             ) : undefined
           }
