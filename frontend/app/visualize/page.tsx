@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { api } from '@/lib/api'
 import * as MOCK from '@/lib/mock-data'
-import ContextBar from '@/components/layout/ContextBar'
+import TopBar from '@/components/layout/TopBar'
+import { useNavSlot } from '@/lib/nav-slot-context'
 import TimeSeriesChart from '@/components/visualize/TimeSeriesChart'
 import PSDChart from '@/components/visualize/PSDChart'
 import TopoplotImage from '@/components/visualize/TopoplotImage'
@@ -88,6 +89,43 @@ function WarnIcon() {
   )
 }
 
+// ---- ExplainPanel --------------------------------------------------------
+function ExplainPanel({ short, full }: { short: string; full?: string }) {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <div className="explain">
+      <InfoIcon />
+      <p>
+        {expanded && full ? full : short}
+        {full && !expanded && (
+          <>
+            {' '}
+            <a
+              href="#"
+              style={{ color: 'var(--accent)', textUnderlineOffset: '2px' }}
+              onClick={(e) => { e.preventDefault(); setExpanded(true) }}
+            >
+              more ↓
+            </a>
+          </>
+        )}
+        {expanded && (
+          <>
+            {' '}
+            <a
+              href="#"
+              style={{ color: 'var(--text-muted)', textUnderlineOffset: '2px', fontSize: '9px' }}
+              onClick={(e) => { e.preventDefault(); setExpanded(false) }}
+            >
+              less ↑
+            </a>
+          </>
+        )}
+      </p>
+    </div>
+  )
+}
+
 // ---- ChartCard -----------------------------------------------------------
 interface ChartCardProps {
   title: string
@@ -95,11 +133,12 @@ interface ChartCardProps {
   controls?: React.ReactNode
   explain: boolean
   explainText: string
+  explainTextFull?: string
   children: React.ReactNode
   animClass?: string
 }
 
-function ChartCard({ title, meta, controls, explain, explainText, children, animClass }: ChartCardProps) {
+function ChartCard({ title, meta, controls, explain, explainText, explainTextFull, children, animClass }: ChartCardProps) {
   return (
     <section className={'card' + (animClass ? ' ' + animClass : '')}>
       <header className="card-head">
@@ -110,11 +149,8 @@ function ChartCard({ title, meta, controls, explain, explainText, children, anim
         {controls && <div className="card-controls">{controls}</div>}
       </header>
       <div className="card-body">{children}</div>
-      {explain && (
-        <div className="explain">
-          <InfoIcon />
-          <p>{explainText}</p>
-        </div>
+      {explain && explainText && (
+        <ExplainPanel short={explainText} full={explainTextFull} />
       )}
     </section>
   )
@@ -358,12 +394,30 @@ export default function VisualizePage() {
     setTopoData(MOCK.topoplot(ds, subj, r, freqBand))
   }
 
-  async function handleLoad(ds: string, subj: number, r: string) {
+  const handleLoad = useCallback(async (ds: string, subj: number, r: string) => {
     setDataset(ds)
     setSubject(subj)
     setRun(r)
     await doLoad(ds, subj, r, isBackend)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBackend])
+
+  const { setSlot } = useNavSlot()
+
+  useEffect(() => {
+    if (!appOptions) return
+    setSlot(
+      <TopBar
+        options={appOptions}
+        loaded={loaded}
+        loading={loading}
+        explain={explain}
+        onExplainChange={setExplain}
+        onLoad={handleLoad}
+      />
+    )
+    return () => setSlot(null)
+  }, [appOptions, loaded, loading, explain, setExplain, handleLoad, setSlot])
 
   // Keyboard navigation for epochs
   useEffect(() => {
@@ -432,7 +486,16 @@ export default function VisualizePage() {
 
   const totalEpochs = loaded?.n_epochs ?? 1
 
-  const tsExplain =
+  const tsExplainShort =
+    tsData?.class_label === 'right_hand'
+      ? 'C3 shows mu-band ERD (0.5–2 s) — the desynchronization the classifier detects.'
+      : tsData?.class_label === 'left_hand'
+      ? 'C4 shows mu-band ERD; C3/C4 lateralization is the key discriminative feature.'
+      : tsData?.class_label === 'feet'
+      ? 'ERD concentrates at Cz — foot motor cortex sits on the medial wall.'
+      : 'Baseline: −0.5 s pre-cue. Imagery window: 0–4 s. C3/C4 = contralateral motor cortex.'
+
+  const tsExplainFull =
     tsData?.class_label === 'right_hand'
       ? 'Right-hand motor imagery cue at t = 0. C3 (contralateral) shows mu-band desynchronization (ERD) between 0.5–2 s — the drop in oscillatory amplitude the classifier detects.'
       : tsData?.class_label === 'left_hand'
@@ -441,9 +504,20 @@ export default function VisualizePage() {
       ? 'Feet motor imagery cue at t = 0. ERD concentrates around Cz — foot motor cortex sits on the medial wall, so the central midline channel shows the strongest mu suppression.'
       : 'Motor imagery epoch. Baseline from −0.5 s pre-cue to cue onset. Imagery window runs 0–4 s. C3 and C4 cover contralateral motor cortex for right and left hand; Cz is the midline reference for feet.'
 
-  const psdExplain = `This chart shows how much signal power exists at each frequency, averaged across all ${loaded?.n_epochs ?? ''} trials. Think of it like an audio equalizer for brain waves — instead of bass and treble, we track motor rhythms. The μ band (8–13 Hz) is the brain's natural "idle" motor rhythm: it dips when you imagine movement (that dip is the ERD this benchmark detects). The β band (13–30 Hz) is a faster motor rhythm that rebounds strongly after imagery. The frequency axis stops at 40 Hz because motor imagery signals live below that — higher frequencies are mostly noise or muscle artifact. Compare C3 vs C4: if one dips more than the other, the brain is showing lateralized motor activity, which is the key feature classifiers exploit.`
+  const psdExplainShort = `Suppressed μ (8–13 Hz) and β (13–30 Hz) confirm motor cortex activation — these rhythms dip when you imagine movement.`
 
-  const topoExplain =
+  const psdExplainFull = `This chart shows how much signal power exists at each frequency, averaged across all ${loaded?.n_epochs ?? ''} trials. The μ band (8–13 Hz) is the brain's natural "idle" motor rhythm: it dips when you imagine movement (that dip is the ERD this benchmark detects). The β band (13–30 Hz) is a faster motor rhythm that rebounds strongly after imagery. Compare C3 vs C4: if one dips more than the other, the brain is showing lateralized motor activity — the key feature classifiers exploit.`
+
+  const topoExplainShort =
+    freqBand === 'mu'
+      ? 'Mu-band ERD over C3/C4 marks bilateral motor-cortex desynchronization.'
+      : freqBand === 'beta'
+      ? 'Beta-band suppression in sensorimotor regions; smaller spatial footprint than mu.'
+      : freqBand === 'alpha'
+      ? 'Occipital alpha (hot over POz/Pz) is unrelated to motor imagery — a sanity check.'
+      : 'Broadband topography averages all frequencies, washing out motor-cortex specificity.'
+
+  const topoExplainFull =
     freqBand === 'mu'
       ? 'Mu-band (8–13 Hz) topography. Cool colors (desynchronization) over C3 and C4 indicate bilateral motor-cortex ERD — exactly where MI activity concentrates. CSP and Riemannian methods encode this spatial pattern.'
       : freqBand === 'beta'
@@ -473,15 +547,6 @@ export default function VisualizePage() {
 
   return (
     <>
-      <ContextBar
-        options={appOptions}
-        loaded={loaded}
-        loading={loading}
-        explain={explain}
-        onExplainChange={setExplain}
-        onLoad={handleLoad}
-      />
-
       {isMockFallback && (
         <div style={{
           display: 'flex',
@@ -558,7 +623,8 @@ export default function VisualizePage() {
             ) : undefined
           }
           explain={explain}
-          explainText={tsExplain}
+          explainText={tsExplainShort}
+          explainTextFull={tsExplainFull}
         >
           {loading ? <Skeleton height={280} /> : tsData ? <TimeSeriesChart data={tsData} /> : <EmptyState />}
         </ChartCard>
@@ -580,7 +646,8 @@ export default function VisualizePage() {
             ) : undefined
           }
           explain={explain}
-          explainText={psdExplain}
+          explainText={psdExplainShort}
+          explainTextFull={psdExplainFull}
         >
           {loading ? <Skeleton height={240} /> : psdData ? <PSDChart data={psdData} /> : <EmptyState />}
         </ChartCard>
@@ -602,7 +669,8 @@ export default function VisualizePage() {
             ) : undefined
           }
           explain={explain}
-          explainText={topoExplain}
+          explainText={topoExplainShort}
+          explainTextFull={topoExplainFull}
         >
           {loading ? <Skeleton height={280} /> : topoData ? <TopoplotImage data={topoData} /> : <EmptyState />}
         </ChartCard>
