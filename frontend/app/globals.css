@@ -337,7 +337,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
   transition: transform .15s, background .15s;
 }
 .toggle input:checked + .toggle-slider {
-  background: rgba(167, 139, 250, 0.15);
+  background: rgba(56, 189, 248, 0.15);
   border-color: var(--accent);
 }
 .toggle input:checked + .toggle-slider::before {
