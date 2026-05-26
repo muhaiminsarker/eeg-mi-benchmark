@@ -333,6 +333,7 @@ export default function VisualizePage() {
 
   async function doLoad(ds: string, subj: number, r: string, backend: boolean) {
     setLoading(true)
+    setPlaying(false)
     setLoaded(null)
     setTsData(null)
     setPsdData(null)
