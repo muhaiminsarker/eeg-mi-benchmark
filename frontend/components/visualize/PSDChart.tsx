@@ -209,7 +209,7 @@ export default function PSDChart({ data, height = 240, explain }: Props) {
               <span style={{ color: isActive ? 'var(--text)' : undefined }}>{ch}</span>
               {hoverIdx >= 0
                 ? <span style={{ color: isActive ? 'var(--text)' : undefined }}>{allChannels[ch][hoverIdx].toFixed(1)} dB</span>
-                : <span>{muMean.toFixed(1)} dB<span style={{ opacity: 0.5, marginLeft: 2 }}>μ</span></span>
+                : <span>{muMean.toFixed(1)} dB<span style={{ opacity: 0.5, marginLeft: 3 }}>(μ-band)</span></span>
               }
             </div>
           )

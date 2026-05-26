@@ -129,10 +129,12 @@ function Skeleton({ height }: { height: number }) {
 
 function EmptyTimeSeriesIcon() {
   return (
-    <svg width="36" height="28" viewBox="0 0 36 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
-      <line x1="2" y1="20" x2="34" y2="20" strokeOpacity="0.5" />
-      <line x1="2" y1="4" x2="2" y2="20" strokeOpacity="0.5" />
-      <polyline points="2 13 5 7 8 17 12 6 16 14 20 10 24 15 28 9 32 13" />
+    <svg width="36" height="28" viewBox="0 0 36 26" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+      <line x1="2" y1="23" x2="34" y2="23" strokeWidth="0.8" strokeOpacity="0.5" />
+      <line x1="2" y1="3" x2="2" y2="23" strokeWidth="0.8" strokeOpacity="0.5" />
+      <polyline points="3 7 6 4 9 9 12 3 15 8 18 5 21 9 24 6 27 10 33 7" strokeWidth="1.2" opacity="0.85" />
+      <polyline points="3 13 6 10 9 15 12 9 15 14 18 11 21 15 24 12 27 16 33 13" strokeWidth="1.2" opacity="0.55" />
+      <polyline points="3 19 6 16 9 21 12 15 15 20 18 17 21 21 24 18 27 22 33 19" strokeWidth="1.2" opacity="0.35" />
     </svg>
   )
 }
@@ -187,7 +189,7 @@ const CLASS_COLORS: Record<string, string> = {
   left_hand: '#6495ed',
   right_hand: '#e06464',
   feet: '#5cb88a',
-  tongue: '#888',
+  tongue: '#e8a438',
 }
 
 function ClassBadge({ label }: { label: string }) {
@@ -214,7 +216,7 @@ const LABEL_COLORS: Record<string, string> = {
   left_hand: '#6495ed',
   right_hand: '#e06464',
   feet: '#5cb88a',
-  tongue: '#888',
+  tongue: '#e8a438',
 }
 
 function EpochStrip({ labels, current, onSelect }: { labels: string[]; current: number; onSelect: (i: number) => void }) {
@@ -486,12 +488,12 @@ export default function VisualizePage() {
 
   const topoExplain: React.ReactNode =
     freqBand === 'mu'
-      ? <><strong>Cool patches over C3/C4</strong> mean motor cortex went quiet. That spatial pattern is exactly what the classifier reads.</>
+      ? <><strong>Cool patches over C3/C4</strong> mean motor cortex went quiet during imagery. This bilateral suppression is the primary motor imagery signature.</>
       : freqBand === 'beta'
-      ? <><strong>Beta suppression</strong> is more focused than mu and rebounds sharply after imagery ends, a separate useful signature.</>
+      ? <><strong>Beta suppression</strong> is more spatially focused than mu and rebounds sharply once imagery ends, a second distinct feature of motor imagination.</>
       : freqBand === 'alpha'
-      ? <>The <strong>occipital hotspot</strong> (back of head) is visual cortex at rest, unrelated to movement. Shown here as a sanity check.</>
-      : <><strong>All frequencies blended.</strong> Switch to mu or beta to see the motor-specific patterns the classifier actually uses.</>
+      ? <>The <strong>occipital hotspot</strong> (back of head) is visual cortex at rest, unrelated to motor imagery. Shown here as a sanity check.</>
+      : <><strong>All frequencies blended.</strong> Switch to mu or beta to isolate the motor-specific patterns that distinguish imagined movements.</>
 
   if (!appOptions) {
     return (
@@ -571,7 +573,7 @@ export default function VisualizePage() {
                     : <PlayIcon />
                   }
                 </button>
-                <span className="mono small">
+                <span style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums', color: 'var(--text-dim)' }}>
                   {String(epochIdx + 1).padStart(2, '0')} / {String(totalEpochs).padStart(2, '0')}
                 </span>
                 <button className="icon-btn" onClick={() => setEpochIdx((i) => Math.min(totalEpochs - 1, i + 1))} disabled={epochIdx === totalEpochs - 1 || playing}

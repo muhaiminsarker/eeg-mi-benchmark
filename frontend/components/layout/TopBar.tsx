@@ -111,7 +111,7 @@ const CLASS_COLORS: Record<string, string> = {
   left_hand: '#6495ed',
   right_hand: '#e06464',
   feet: '#5cb88a',
-  tongue: '#888',
+  tongue: '#e8a438',
 }
 
 function friendlyClass(cls: string): string {
@@ -189,14 +189,17 @@ export default function TopBar({ options, loaded, loading, explain, onExplainCha
         </div>
       </div>
 
-      <button
-        className={'load-btn' + (loading ? ' loading' : '')}
-        onClick={() => onLoad(dataset, parseInt(subject), run)}
-        disabled={loading}
-        style={{ fontSize: 11, padding: '0 14px' }}
-      >
-        {loading ? <><Spinner /> Loading…</> : <><PlayIcon /> Load</>}
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span className="topbar-ctx-lbl" style={{ visibility: 'hidden' }}>load</span>
+        <button
+          className={'load-btn' + (loading ? ' loading' : '')}
+          onClick={() => onLoad(dataset, parseInt(subject), run)}
+          disabled={loading}
+          style={{ fontSize: 11, padding: '0 14px' }}
+        >
+          {loading ? <><Spinner /> Loading…</> : <><PlayIcon /> Load</>}
+        </button>
+      </div>
 
       {classChips && (
         <>

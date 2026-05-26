@@ -188,7 +188,11 @@ export default function TimeSeriesChart({ data, height = 280, explain }: Props) 
           <text x={(xScale(erdStart) + xScale(erdEnd)) / 2} y={M.top + 12}
             textAnchor="middle" fontSize="9" fontFamily="var(--sans)" fill={C.cueLine} opacity="0.8">
             {explain
-              ? (cls === 'right_hand' ? 'watch C3 dip' : cls === 'left_hand' ? 'watch C4 dip' : 'watch Cz dip')
+              ? cls === 'right_hand' ? 'watch C3 dip'
+                : cls === 'left_hand' ? 'watch C4 dip'
+                : cls === 'feet' ? 'watch Cz dip'
+                : cls === 'tongue' ? 'diffuse signal'
+                : 'watch for ERD'
               : 'imagery'}
           </text>
         )}
@@ -233,8 +237,8 @@ export default function TimeSeriesChart({ data, height = 280, explain }: Props) 
         {!hidden.has('C4') && <path d={pathFor(channels.C4)} fill="none" stroke={C.C4} strokeWidth="1.4" opacity="0.95" style={{ filter: C.glow }} />}
         {!hidden.has('Cz') && <path d={pathFor(channels.Cz)} fill="none" stroke={C.Cz} strokeWidth="1.6" style={{ filter: C.glow }} />}
 
-        {/* Explain-mode: ERD peak callout */}
-        {explain && !hidden.has(targetCh) && erdPeakX > 0 && (
+        {/* Explain-mode: ERD peak callout (tongue has no strong target channel in this data) */}
+        {explain && cls !== 'tongue' && !hidden.has(targetCh) && erdPeakX > 0 && (
           <g opacity="0.9">
             <circle cx={erdPeakX} cy={erdPeakY} r={7} fill="none" stroke={C[targetCh]} strokeWidth="1.2" />
             <text x={erdPeakX + 10} y={erdPeakY + 3} fontSize="8" fontFamily="var(--sans)" fill={C[targetCh]}>
