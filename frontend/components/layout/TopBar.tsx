@@ -5,10 +5,34 @@ import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import type { AppOptions, LoadedMeta } from '@/app/visualize/page'
 
+function VisualizeIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="2 12 6 4 10 18 14 8 18 14 22 12" />
+    </svg>
+  )
+}
+function ClassifyIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="4" r="2" /><circle cx="4" cy="20" r="2" /><circle cx="20" cy="20" r="2" />
+      <line x1="12" y1="6" x2="4" y2="18" /><line x1="12" y1="6" x2="20" y2="18" />
+    </svg>
+  )
+}
+function BenchmarkIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+      <line x1="2" y1="20" x2="22" y2="20" />
+    </svg>
+  )
+}
+
 const TABS = [
-  { href: '/visualize', label: 'Visualize' },
-  { href: '/classify',  label: 'Classify'  },
-  { href: '/benchmark', label: 'Benchmark' },
+  { href: '/visualize', label: 'Visualize', icon: <VisualizeIcon /> },
+  { href: '/classify',  label: 'Classify',  icon: <ClassifyIcon />  },
+  { href: '/benchmark', label: 'Benchmark', icon: <BenchmarkIcon /> },
 ]
 
 function ChevronIcon({ open }: { open: boolean }) {
@@ -134,9 +158,9 @@ export default function TopBar({ options, loaded, loading, explain, onExplainCha
       <div className="topbar-div" />
 
       <nav className="nav-tabs" style={{ marginRight: 4 }}>
-        {TABS.map(({ href, label }) => (
+        {TABS.map(({ href, label, icon }) => (
           <Link key={href} href={href} className={'nav-tab' + (pathname.startsWith(href) ? ' active' : '')}>
-            {label}
+            {icon}{label}
           </Link>
         ))}
       </nav>
@@ -179,20 +203,9 @@ export default function TopBar({ options, loaded, loading, explain, onExplainCha
 
       <div style={{ flex: 1 }} />
 
-      {loaded && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 8 }}>
-          <span className="topbar-ctx-lbl" style={{ marginBottom: 0 }}>Speed</span>
-          <div className="speed-btns">
-            <button className="sp-btn">0.5×</button>
-            <button className="sp-btn active">1×</button>
-            <button className="sp-btn">2×</button>
-          </div>
-        </div>
-      )}
-
       <button className="btn-annotate" onClick={() => onExplainChange(!explain)}>
         <span className={`ann-dot${explain ? ' on' : ''}`} />
-        Annotate
+        Explain
       </button>
     </div>
   )

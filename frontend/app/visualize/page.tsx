@@ -185,10 +185,10 @@ function EmptyState({ onLoad }: { onLoad?: () => void }) {
 
 // ---- Class label pill -----------------------------------------------------
 const CLASS_COLORS: Record<string, string> = {
-  left_hand: 'var(--c3)',
-  right_hand: 'var(--c4)',
-  feet: 'var(--cz)',
-  tongue: 'var(--text-dim)',
+  left_hand: '#6495ed',
+  right_hand: '#e06464',
+  feet: '#5cb88a',
+  tongue: '#888',
 }
 
 function ClassBadge({ label }: { label: string }) {
@@ -488,43 +488,57 @@ export default function VisualizePage() {
 
   const tsExplainShort =
     tsData?.class_label === 'right_hand'
-      ? 'C3 shows mu-band ERD (0.5–2 s) — the desynchronization the classifier detects.'
+      ? 'Each line is a scalp electrode near your motor cortex. Watch the C3 line (left hemisphere) dip after the 0 s cue — that\'s your brain going quieter as you imagine moving your right hand.'
       : tsData?.class_label === 'left_hand'
-      ? 'C4 shows mu-band ERD; C3/C4 lateralization is the key discriminative feature.'
+      ? 'C4 (right hemisphere) dips after the cue for left-hand imagery. Your brain suppresses activity on the side opposite to the imagined limb — the wider the gap between C3 and C4, the easier it is to classify.'
       : tsData?.class_label === 'feet'
-      ? 'ERD concentrates at Cz — foot motor cortex sits on the medial wall.'
-      : 'Baseline: −0.5 s pre-cue. Imagery window: 0–4 s. C3/C4 = contralateral motor cortex.'
+      ? 'Foot motor cortex sits at the top-center of the brain, so the Cz line (midline) drops most after the cue. The sides (C3/C4) stay relatively flat — a clean midline-only dip.'
+      : tsData?.class_label === 'tongue'
+      ? 'Tongue motor cortex is near the midline and slightly lateral. After the cue, Cz and neighboring channels dip — distinct from the strong left/right asymmetry you\'d see for hand imagery.'
+      : 'Three electrodes near motor cortex. The flat region before 0 s is baseline. After the cue, watch for a dip in the lines — that\'s your brain "quieting down" during imagined movement.'
 
   const tsExplainFull =
     tsData?.class_label === 'right_hand'
-      ? 'Right-hand motor imagery cue at t = 0. C3 (contralateral) shows mu-band desynchronization (ERD) between 0.5–2 s — the drop in oscillatory amplitude the classifier detects.'
+      ? 'When you imagine moving your right hand, neurons in the left motor cortex (C3) suppress their natural 8–13 Hz rhythm — like turning down background radio static. This drop is called event-related desynchronization (ERD). The classifier learns to spot which electrode dips most to determine which hand you imagined.'
       : tsData?.class_label === 'left_hand'
-      ? 'Left-hand motor imagery cue at t = 0. C4 (contralateral right hemisphere) shows mu-band ERD. C3 stays relatively suppressed — the lateralization between C3 and C4 is the key discriminative feature.'
+      ? 'Imagining your left hand quiets the right motor cortex, so C4 dips after the cue. C3 stays relatively active. The classifier reads this asymmetry: if C4 drops more than C3, it predicts left hand. This left-right pattern is the core feature that makes motor imagery classifiable.'
       : tsData?.class_label === 'feet'
-      ? 'Feet motor imagery cue at t = 0. ERD concentrates around Cz — foot motor cortex sits on the medial wall, so the central midline channel shows the strongest mu suppression.'
-      : 'Motor imagery epoch. Baseline from −0.5 s pre-cue to cue onset. Imagery window runs 0–4 s. C3 and C4 cover contralateral motor cortex for right and left hand; Cz is the midline reference for feet.'
+      ? 'Feet motor imagery activates the top-center of cortex (the medial wall), which maps directly to the Cz electrode. Unlike hand imagery — which creates an obvious left-right asymmetry — feet imagery creates a front-to-back pattern centered on Cz. C3 and C4 stay quiet while Cz dips.'
+      : tsData?.class_label === 'tongue'
+      ? 'Tongue motor cortex sits near the midline and slightly lateral. Its imagery pattern is more diffuse than hand imagery, showing a modest dip at Cz with less pronounced left-right asymmetry. The classifier uses the unique spatial fingerprint to distinguish tongue from hand or feet imagery.'
+      : `Motor imagery epoch from subject ${subject}. Baseline runs from −0.5 s before the cue to 0 s. The imagery window is 0–4 s. C3 sits over left motor cortex, C4 over right, and Cz is the midline. Use arrow keys or the play button to browse all ${loaded?.n_epochs ?? ''} epochs.`
 
-  const psdExplainShort = `Suppressed μ (8–13 Hz) and β (13–30 Hz) confirm motor cortex activation — these rhythms dip when you imagine movement.`
+  const psdExplainShort =
+    run === 'imagined_hand'
+      ? 'This "frequency fingerprint" shows brain activity at each Hz. The dip between 8–13 Hz (mu rhythm) is your motor cortex going quieter during imagined movement — that dip is the core signal this BCI uses.'
+      : run === 'imagined_feet'
+      ? 'The hollow around 8–13 Hz is the mu rhythm suppressing during foot imagery. Cz typically shows the deepest dip, since foot motor cortex is on the midline directly below it.'
+      : run === 'imagined_tongue'
+      ? 'Tongue imagery produces a broader mu suppression (8–13 Hz) across channels. Compare channels using the buttons above to see where the dip is deepest.'
+      : 'Brain activity at each frequency, averaged across all trials. The dip around 8–13 Hz is the mu rhythm — your motor cortex goes quieter when you imagine moving.'
 
-  const psdExplainFull = `This chart shows how much signal power exists at each frequency, averaged across all ${loaded?.n_epochs ?? ''} trials. The μ band (8–13 Hz) is the brain's natural "idle" motor rhythm: it dips when you imagine movement (that dip is the ERD this benchmark detects). The β band (13–30 Hz) is a faster motor rhythm that rebounds strongly after imagery. Compare C3 vs C4: if one dips more than the other, the brain is showing lateralized motor activity — the key feature classifiers exploit.`
+  const psdExplainFull =
+    run === 'imagined_hand'
+      ? `This shows how much electrical power exists at each frequency (1–40 Hz), averaged across all ${loaded?.n_epochs ?? ''} trials. Your motor cortex has a natural "idle" rhythm at 8–13 Hz (mu) and 13–30 Hz (beta). When you imagine a movement, these rhythms suppress — leaving a dip in the curve. A deeper C3 dip vs. C4 signals right-hand imagery; a deeper C4 signals left hand. Use the C3 / C4 / Cz buttons to compare.`
+      : `This shows how much electrical power exists at each frequency (1–40 Hz), averaged across all ${loaded?.n_epochs ?? ''} trials. The dip around 8–13 Hz is the mu rhythm suppressing during motor imagery — the brain turning down its "idle" motor oscillation. For feet and tongue imagery, the suppression is strongest at Cz (midline) rather than the lateral channels.`
 
   const topoExplainShort =
     freqBand === 'mu'
-      ? 'Mu-band ERD over C3/C4 marks bilateral motor-cortex desynchronization.'
+      ? 'A top-down head view. Cool/blue areas have lower brain activity — motor cortex goes "quiet" during imagined movement. That cool patch over C3/C4 is the signal the classifier reads.'
       : freqBand === 'beta'
-      ? 'Beta-band suppression in sensorimotor regions; smaller spatial footprint than mu.'
+      ? 'Beta (13–30 Hz) map. Suppression is more focused than the mu map and recovers sharply after the imagery window ends — a separate but complementary signature.'
       : freqBand === 'alpha'
-      ? 'Occipital alpha (hot over POz/Pz) is unrelated to motor imagery — a sanity check.'
-      : 'Broadband topography averages all frequencies, washing out motor-cortex specificity.'
+      ? 'Alpha in the occipital region (back of head) is a visual resting rhythm, unrelated to motor imagery. It\'s shown here as a sanity check — that hot patch at the back should look the same regardless of task.'
+      : 'All frequencies averaged together — this washes out task-specific patterns. You\'re seeing overall signal strength, not the motor-specific information the classifier uses.'
 
   const topoExplainFull =
     freqBand === 'mu'
-      ? 'Mu-band (8–13 Hz) topography. Cool colors (desynchronization) over C3 and C4 indicate bilateral motor-cortex ERD — exactly where MI activity concentrates. CSP and Riemannian methods encode this spatial pattern.'
+      ? 'The mu map (8–13 Hz) shows which brain areas suppressed their rhythms during motor imagery, averaged across all trials. Cool colors (blue) over C3 and C4 mean motor cortex went "quiet" — exactly where it should. CSP and Riemannian classifiers encode this spatial pattern as a covariance matrix to distinguish classes.'
       : freqBand === 'beta'
-      ? 'Beta-band (13–30 Hz) topography. Sensorimotor regions show suppression with a smaller spatial footprint than mu. Post-movement beta rebound after the imagery window is a reliable contralateral signature.'
+      ? 'Beta-band (13–30 Hz) topography shows sensorimotor suppression with a tighter spatial pattern than mu. After the imagery window ends, beta rebounds strongly — a phenomenon called "beta rebound" — which is a reliable contralateral signature that some BCI pipelines also exploit.'
       : freqBand === 'alpha'
-      ? 'Alpha-band topography. Occipital alpha (hot over POz/Pz) is unrelated to motor imagery — it serves as a sanity check that non-motor regions show the expected resting rhythm.'
-      : 'Broadband (1–40 Hz) topography. Averaging all frequencies washes out motor-cortex specificity — you see overall signal magnitude rather than task-specific patterns.'
+      ? 'Alpha topography is dominated by the posterior alpha rhythm in occipital cortex — completely unrelated to motor imagery. This view is intentionally included as a sanity check: the occipital "hotspot" should look the same regardless of which hand or movement you imagined.'
+      : 'Broadband power (1–40 Hz) blends the task-specific motor signal with unrelated rhythms like occipital alpha and frontal theta. The result shows raw amplitude distribution across the scalp. Switch to the mu or beta maps to see the motor-specific patterns the classifier actually uses.'
 
   if (!appOptions) {
     return (
