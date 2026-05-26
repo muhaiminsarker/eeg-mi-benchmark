@@ -275,7 +275,7 @@ export function topoplot(
     .filter((e) => ['C3', 'C4', 'Cz', 'Fz', 'Pz', 'POz'].includes(e.name))
     .map(
       (e) =>
-        `<text x="${(e.x + 6).toFixed(2)}" y="${(e.y - 6).toFixed(2)}" font-family="var(--mono)" font-size="9" fill="var(--topo-label, #cbd5e1)">${e.name}</text>`
+        `<text x="${(e.x + 6).toFixed(2)}" y="${(e.y - 6).toFixed(2)}" font-family="var(--sans)" font-size="9" fill="var(--topo-label, #cbd5e1)">${e.name}</text>`
     )
     .join('')
 

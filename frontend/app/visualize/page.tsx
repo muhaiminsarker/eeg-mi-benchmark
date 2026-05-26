@@ -104,13 +104,11 @@ interface ChartCardProps {
   title: string
   meta: React.ReactNode
   controls?: React.ReactNode
-  explain: boolean
-  explainContent?: React.ReactNode
   children: React.ReactNode
   animClass?: string
 }
 
-function ChartCard({ title, meta, controls, explain, explainContent, children, animClass }: ChartCardProps) {
+function ChartCard({ title, meta, controls, children, animClass }: ChartCardProps) {
   return (
     <section className={'card' + (animClass ? ' ' + animClass : '')}>
       <header className="card-head">
@@ -121,9 +119,6 @@ function ChartCard({ title, meta, controls, explain, explainContent, children, a
         {controls && <div className="card-controls">{controls}</div>}
       </header>
       <div className="card-body">{children}</div>
-      {explain && explainContent && (
-        <ExplainPanel>{explainContent}</ExplainPanel>
-      )}
     </section>
   )
 }
@@ -132,7 +127,7 @@ function Skeleton({ height }: { height: number }) {
   return <div className="skeleton" style={{ height }} />
 }
 
-function EmptyState({ onLoad }: { onLoad?: () => void }) {
+function EmptyState({ hint }: { hint?: string }) {
   return (
     <div style={{
       display: 'flex',
@@ -149,7 +144,9 @@ function EmptyState({ onLoad }: { onLoad?: () => void }) {
         <polyline points="10 8 6 12 10 16" />
         <line x1="6" y1="12" x2="18" y2="12" />
       </svg>
-      <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>Select dataset and press <b style={{ color: 'var(--text)' }}>load</b></span>
+      <span style={{ color: 'var(--text-dim)', fontSize: 11, textAlign: 'center', maxWidth: 240 }}>
+        {hint ?? <>Select dataset and press <b style={{ color: 'var(--text)' }}>load</b></>}
+      </span>
     </div>
   )
 }
@@ -456,26 +453,6 @@ export default function VisualizePage() {
 
   const totalEpochs = loaded?.n_epochs ?? 1
 
-  const tsExplain: React.ReactNode =
-    tsData?.class_label === 'right_hand'
-      ? <>Watch the <strong>C3 line dip</strong> after 0 s — that&apos;s left motor cortex going quiet as you imagine your right hand.</>
-      : tsData?.class_label === 'left_hand'
-      ? <>The <strong>C4 line dips</strong> after the cue — motor cortex quiets on the side opposite to the imagined hand.</>
-      : tsData?.class_label === 'feet'
-      ? <>The <strong>Cz line dips</strong> most — foot motor cortex sits on the midline, right below that electrode.</>
-      : tsData?.class_label === 'tongue'
-      ? <>A <strong>modest Cz dip</strong> after the cue — tongue imagery is more midline and less asymmetric than hand imagery.</>
-      : <>Watch for a <strong>dip in the lines</strong> after 0 s — that&apos;s motor cortex going quiet during imagined movement.</>
-
-  const psdExplain: React.ReactNode =
-    run === 'imagined_hand'
-      ? <>The <strong>hollow at 8–13 Hz</strong> is the mu rhythm quieting — the deeper the dip, the stronger the imagery signal the BCI reads.</>
-      : run === 'imagined_feet'
-      ? <>The <strong>Cz dip at 8–13 Hz</strong> is clearest for feet imagery — foot motor cortex sits on the midline, right below that electrode.</>
-      : run === 'imagined_tongue'
-      ? <>The <strong>mu dip (8–13 Hz)</strong> is more diffuse for tongue imagery — compare channels to see where it&apos;s deepest.</>
-      : <>The <strong>dip around 8–13 Hz</strong> is the mu rhythm — motor cortex goes quieter when you imagine moving.</>
-
   const topoExplain: React.ReactNode =
     freqBand === 'mu'
       ? <><strong>Cool patches over C3/C4</strong> mean motor cortex went quiet — that spatial pattern is exactly what the classifier reads.</>
@@ -580,10 +557,8 @@ export default function VisualizePage() {
               </div>
             ) : undefined
           }
-          explain={explain}
-          explainContent={tsExplain}
         >
-          {loading ? <Skeleton height={280} /> : tsData ? <TimeSeriesChart data={tsData} /> : <EmptyState />}
+          {loading ? <Skeleton height={280} /> : tsData ? <TimeSeriesChart data={tsData} explain={explain} /> : <EmptyState hint="Load a dataset to explore EEG signals epoch by epoch." />}
         </ChartCard>
 
         {/* PSD */}
@@ -602,10 +577,8 @@ export default function VisualizePage() {
               </div>
             ) : undefined
           }
-          explain={explain}
-          explainContent={psdExplain}
         >
-          {loading ? <Skeleton height={240} /> : psdData ? <PSDChart data={psdData} /> : <EmptyState />}
+          {loading ? <Skeleton height={240} /> : psdData ? <PSDChart data={psdData} explain={explain} /> : <EmptyState hint="Load a dataset to see frequency content across motor bands." />}
         </ChartCard>
 
         {/* Topoplot */}
@@ -624,10 +597,13 @@ export default function VisualizePage() {
               </div>
             ) : undefined
           }
-          explain={explain}
-          explainContent={topoExplain}
         >
-          {loading ? <Skeleton height={280} /> : topoData ? <TopoplotImage data={topoData} /> : <EmptyState />}
+          {loading ? <Skeleton height={280} /> : topoData ? (
+            <>
+              <TopoplotImage data={topoData} />
+              {explain && <ExplainPanel>{topoExplain}</ExplainPanel>}
+            </>
+          ) : <EmptyState hint="Load a dataset to see a scalp map of brain activity." />}
         </ChartCard>
       </main>
 

@@ -27,9 +27,10 @@ function ticks(min: number, max: number, count: number): number[] {
 interface Props {
   data: PSDData
   height?: number
+  explain?: boolean
 }
 
-export default function PSDChart({ data, height = 240 }: Props) {
+export default function PSDChart({ data, height = 240, explain }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(600)
   const [hoverFreq, setHoverFreq] = useState<number | null>(null)
@@ -87,7 +88,6 @@ export default function PSDChart({ data, height = 240 }: Props) {
     const px = e.clientX - rect.left
     if (px < M.left || px > M.left + innerW) { setHoverFreq(null); return }
     const f = xMin + ((px - M.left) / innerW) * (xMax - xMin)
-    // find nearest freq
     let lo = 0, hi = freqs.length - 1
     while (hi - lo > 1) {
       const mid = (lo + hi) >> 1
@@ -124,29 +124,35 @@ export default function PSDChart({ data, height = 240 }: Props) {
         {yTicks.map((v, i) => (
           <g key={i}>
             <line x1={M.left - 4} x2={M.left} y1={yScale(v)} y2={yScale(v)} stroke={C.axis} />
-            <text x={M.left - 8} y={yScale(v) + 3} textAnchor="end" fontSize="10" fontFamily="var(--mono)" fill={C.axisLabel}>
+            <text x={M.left - 8} y={yScale(v) + 3} textAnchor="end" fontSize="10" fontFamily="var(--sans)" fill={C.axisLabel}>
               {v.toFixed(0)}
             </text>
           </g>
         ))}
-        <text x={14} y={M.top + innerH / 2} fontSize="10" fontFamily="var(--mono)" fill={C.axisLabel}
+        <text x={14} y={M.top + innerH / 2} fontSize="10" fontFamily="var(--sans)" fill={C.axisLabel}
           transform={`rotate(-90, 14, ${M.top + innerH / 2})`} textAnchor="middle">dB</text>
 
         {xTickVals.map((t, i) => (
           <g key={i}>
             <line x1={xScale(t)} x2={xScale(t)} y1={M.top + innerH} y2={M.top + innerH + 4} stroke={C.axis} />
-            <text x={xScale(t)} y={M.top + innerH + 16} textAnchor="middle" fontSize="10" fontFamily="var(--mono)" fill={C.axisLabel}>
+            <text x={xScale(t)} y={M.top + innerH + 16} textAnchor="middle" fontSize="10" fontFamily="var(--sans)" fill={C.axisLabel}>
               {t}
             </text>
           </g>
         ))}
-        <text x={M.left + innerW / 2} y={M.top + innerH + 30} textAnchor="middle" fontSize="10" fontFamily="var(--mono)" fill={C.axisLabel}>
+        <text x={M.left + innerW / 2} y={M.top + innerH + 30} textAnchor="middle" fontSize="10" fontFamily="var(--sans)" fill={C.axisLabel}>
           frequency (Hz)
         </text>
 
         {/* Band labels */}
-        <text x={(xScale(8) + xScale(13)) / 2} y={M.top + 12} textAnchor="middle" fontSize="10" fontFamily="var(--mono)" fill={C.cueLine} opacity="0.8">μ</text>
-        <text x={(xScale(13) + xScale(30)) / 2} y={M.top + 12} textAnchor="middle" fontSize="10" fontFamily="var(--mono)" fill={C.Cz} opacity="0.8">β</text>
+        <text x={(xScale(8) + xScale(13)) / 2} y={M.top + 12} textAnchor="middle" fontSize="10" fontFamily="var(--sans)" fill={C.cueLine} opacity="0.8">μ</text>
+        {explain && (
+          <text x={(xScale(8) + xScale(13)) / 2} y={M.top + 23} textAnchor="middle" fontSize="8" fontFamily="var(--sans)" fill={C.cueLine} opacity="0.6">dips</text>
+        )}
+        <text x={(xScale(13) + xScale(30)) / 2} y={M.top + 12} textAnchor="middle" fontSize="10" fontFamily="var(--sans)" fill={C.Cz} opacity="0.8">β</text>
+        {explain && (
+          <text x={(xScale(13) + xScale(30)) / 2} y={M.top + 23} textAnchor="middle" fontSize="8" fontFamily="var(--sans)" fill={C.Cz} opacity="0.6">rebounds</text>
+        )}
 
         {/* Dim channels first */}
         {allChannels && channels.map(([ch, power]) => {
@@ -189,7 +195,7 @@ export default function PSDChart({ data, height = 240 }: Props) {
         )}
       </svg>
 
-      <div style={{ display: 'flex', gap: 16, padding: '8px 0 0 52px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-dim)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 16, padding: '8px 0 0 52px', fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--text-dim)', flexWrap: 'wrap' }}>
         {allChannels && (['C3', 'C4', 'Cz'] as const).map((ch) => {
           const color = C[ch]
           const isActive = ch === channel

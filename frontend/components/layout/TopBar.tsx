@@ -107,6 +107,13 @@ function Dropdown({ label, value, options, onChange, width = 160, disabled = fal
   )
 }
 
+const CLASS_COLORS: Record<string, string> = {
+  left_hand: '#6495ed',
+  right_hand: '#e06464',
+  feet: '#5cb88a',
+  tongue: '#888',
+}
+
 function friendlyClass(cls: string): string {
   return cls
     .replace('left_hand', 'Left Hand')
@@ -145,8 +152,8 @@ export default function TopBar({ options, loaded, loading, explain, onExplainCha
   }))
   const runOpts = options.runs[dataset] ?? []
 
-  const classLabel = loaded?.classes?.length
-    ? loaded.classes.map(friendlyClass).join(' / ')
+  const classChips = loaded?.classes?.length
+    ? loaded.classes.map((cls) => ({ label: friendlyClass(cls), color: CLASS_COLORS[cls] ?? 'var(--text)' }))
     : null
 
   return (
@@ -191,12 +198,19 @@ export default function TopBar({ options, loaded, loading, explain, onExplainCha
         {loading ? <><Spinner /> Loading…</> : <><PlayIcon /> Load</>}
       </button>
 
-      {classLabel && (
+      {classChips && (
         <>
           <div className="topbar-div" style={{ margin: '0 8px' }} />
           <div className="topbar-ctx-field" style={{ borderLeft: 'none', paddingLeft: 0 }}>
-            <span className="topbar-ctx-lbl">Class</span>
-            <span className="topbar-ctx-val acc">{classLabel}</span>
+            <span className="topbar-ctx-lbl">Classes</span>
+            <span className="topbar-ctx-val acc" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              {classChips.map((c, i) => (
+                <span key={c.label}>
+                  <span style={{ color: c.color }}>{c.label}</span>
+                  {i < classChips.length - 1 && <span style={{ color: 'var(--text-muted)', margin: '0 2px' }}>/</span>}
+                </span>
+              ))}
+            </span>
           </div>
         </>
       )}

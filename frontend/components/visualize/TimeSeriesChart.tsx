@@ -20,6 +20,19 @@ const C = {
   glow: CC('--chart-glow', 'none'),
 }
 
+function niceXTicks(min: number, max: number): number[] {
+  const duration = max - min
+  const step = duration > 3.5 ? 1.0 : 0.5
+  const first = Math.floor(min / step) * step
+  const result: number[] = []
+  for (let i = 0; i < 30; i++) {
+    const t = +(first + i * step).toFixed(1)
+    if (t > max + 0.001) break
+    if (t >= min - 0.001) result.push(t)
+  }
+  return result
+}
+
 function ticks(min: number, max: number, count: number): number[] {
   const step = (max - min) / (count - 1)
   return Array.from({ length: count }, (_, i) => +(min + step * i).toFixed(2))
@@ -28,6 +41,7 @@ function ticks(min: number, max: number, count: number): number[] {
 interface Props {
   data: TimeseriesData
   height?: number
+  explain?: boolean
 }
 
 interface HoverState {
@@ -38,7 +52,7 @@ interface HoverState {
   Cz: number
 }
 
-export default function TimeSeriesChart({ data, height = 280 }: Props) {
+export default function TimeSeriesChart({ data, height = 280, explain }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(800)
   const [hover, setHover] = useState<HoverState | null>(null)
@@ -79,10 +93,7 @@ export default function TimeSeriesChart({ data, height = 280 }: Props) {
     return d
   }
 
-  // Dynamic X tick count based on epoch duration
-  const duration = xMax - xMin
-  const xTickCount = duration > 3 ? 9 : 6
-  const xTicks = ticks(xMin, xMax, xTickCount)
+  const xTicks = niceXTicks(xMin, xMax)
   const yTicks = ticks(yMin, yMax, 5)
 
   function onMove(e: React.MouseEvent<SVGSVGElement>) {
@@ -112,6 +123,27 @@ export default function TimeSeriesChart({ data, height = 280 }: Props) {
   const erdStart = 0.5, erdEnd = Math.min(2.5, xMax - 0.1)
   // Baseline: xMin to 0
   const baselineStart = xMin, baselineEnd = 0
+
+  // Explain-mode: find ERD peak of contralateral channel
+  const cls = data.class_label
+  const targetCh: 'C3' | 'C4' | 'Cz' =
+    cls === 'right_hand' ? 'C3' :
+    cls === 'left_hand' ? 'C4' : 'Cz'
+
+  let erdPeakX = 0, erdPeakY = 0
+  if (explain && !hidden.has(targetCh)) {
+    let minV = Infinity, minI = 0
+    for (let i = 0; i < times.length; i++) {
+      if (times[i] >= 0.5 && times[i] <= 2.5 && channels[targetCh][i] < minV) {
+        minV = channels[targetCh][i]
+        minI = i
+      }
+    }
+    if (minV < Infinity) {
+      erdPeakX = xScale(times[minI])
+      erdPeakY = yScale(minV)
+    }
+  }
 
   return (
     <div ref={wrapRef} style={{ width: '100%' }}>
@@ -146,22 +178,26 @@ export default function TimeSeriesChart({ data, height = 280 }: Props) {
         {/* Baseline label */}
         {baselineEnd > baselineStart + 0.1 && (
           <text x={(xScale(baselineStart) + xScale(baselineEnd)) / 2} y={M.top + 12}
-            textAnchor="middle" fontSize="9" fontFamily="var(--mono)" fill={C.axisLabel} opacity="0.7">
-            baseline
+            textAnchor="middle" fontSize="9" fontFamily="var(--sans)" fill={C.axisLabel} opacity="0.7">
+            {explain ? 'resting baseline' : 'baseline'}
           </text>
         )}
 
-        {/* imagery window label */}
+        {/* Imagery window label */}
         {erdEnd > erdStart && (
           <text x={(xScale(erdStart) + xScale(erdEnd)) / 2} y={M.top + 12}
-            textAnchor="middle" fontSize="9" fontFamily="var(--mono)" fill={C.cueLine} opacity="0.8">
-            imagery
+            textAnchor="middle" fontSize="9" fontFamily="var(--sans)" fill={C.cueLine} opacity="0.8">
+            {explain
+              ? (cls === 'right_hand' ? 'watch C3 dip' : cls === 'left_hand' ? 'watch C4 dip' : 'watch Cz dip')
+              : 'imagery'}
           </text>
         )}
 
         {/* Cue line at t=0 */}
         <line x1={xScale(0)} x2={xScale(0)} y1={M.top} y2={M.top + innerH} stroke={C.cueLine} strokeWidth="1.4" strokeDasharray="4 3" opacity="0.8" />
-        <text x={xScale(0) + 5} y={M.top + 24} fontSize="10" fontFamily="var(--mono)" fill={C.cueLine} opacity="0.9">cue</text>
+        <text x={xScale(0) + 5} y={M.top + 24} fontSize="10" fontFamily="var(--sans)" fill={C.cueLine} opacity="0.9">
+          {explain ? 'movement cue' : 'cue'}
+        </text>
 
         {/* Axes */}
         <line x1={M.left} x2={M.left + innerW} y1={M.top + innerH} y2={M.top + innerH} stroke={C.axis} />
@@ -171,24 +207,24 @@ export default function TimeSeriesChart({ data, height = 280 }: Props) {
         {yTicks.map((v, i) => (
           <g key={'yt' + i}>
             <line x1={M.left - 4} x2={M.left} y1={yScale(v)} y2={yScale(v)} stroke={C.axis} />
-            <text x={M.left - 8} y={yScale(v) + 3} textAnchor="end" fontSize="10" fontFamily="var(--mono)" fill={C.axisLabel}>
+            <text x={M.left - 8} y={yScale(v) + 3} textAnchor="end" fontSize="10" fontFamily="var(--sans)" fill={C.axisLabel}>
               {v.toFixed(0)}
             </text>
           </g>
         ))}
-        <text x={14} y={M.top + innerH / 2} fontSize="10" fontFamily="var(--mono)" fill={C.axisLabel}
+        <text x={14} y={M.top + innerH / 2} fontSize="10" fontFamily="var(--sans)" fill={C.axisLabel}
           transform={`rotate(-90, 14, ${M.top + innerH / 2})`} textAnchor="middle">μV</text>
 
         {/* X axis ticks */}
         {xTicks.map((t, i) => (
           <g key={'xt' + i}>
             <line x1={xScale(t)} x2={xScale(t)} y1={M.top + innerH} y2={M.top + innerH + 4} stroke={C.axis} />
-            <text x={xScale(t)} y={M.top + innerH + 16} textAnchor="middle" fontSize="10" fontFamily="var(--mono)" fill={C.axisLabel}>
+            <text x={xScale(t)} y={M.top + innerH + 16} textAnchor="middle" fontSize="10" fontFamily="var(--sans)" fill={C.axisLabel}>
               {t.toFixed(1)}
             </text>
           </g>
         ))}
-        <text x={M.left + innerW / 2} y={M.top + innerH + 30} textAnchor="middle" fontSize="10" fontFamily="var(--mono)" fill={C.axisLabel}>
+        <text x={M.left + innerW / 2} y={M.top + innerH + 30} textAnchor="middle" fontSize="10" fontFamily="var(--sans)" fill={C.axisLabel}>
           time (s)
         </text>
 
@@ -196,6 +232,16 @@ export default function TimeSeriesChart({ data, height = 280 }: Props) {
         {!hidden.has('C3') && <path d={pathFor(channels.C3)} fill="none" stroke={C.C3} strokeWidth="1.4" opacity="0.9" style={{ filter: C.glow }} />}
         {!hidden.has('C4') && <path d={pathFor(channels.C4)} fill="none" stroke={C.C4} strokeWidth="1.4" opacity="0.95" style={{ filter: C.glow }} />}
         {!hidden.has('Cz') && <path d={pathFor(channels.Cz)} fill="none" stroke={C.Cz} strokeWidth="1.6" style={{ filter: C.glow }} />}
+
+        {/* Explain-mode: ERD peak callout */}
+        {explain && !hidden.has(targetCh) && erdPeakX > 0 && (
+          <g opacity="0.9">
+            <circle cx={erdPeakX} cy={erdPeakY} r={7} fill="none" stroke={C[targetCh]} strokeWidth="1.2" />
+            <text x={erdPeakX + 10} y={erdPeakY + 3} fontSize="8" fontFamily="var(--sans)" fill={C[targetCh]}>
+              {targetCh} ERD
+            </text>
+          </g>
+        )}
 
         {/* Hover crosshair */}
         {hover && (
@@ -209,7 +255,7 @@ export default function TimeSeriesChart({ data, height = 280 }: Props) {
       </svg>
 
       {/* Legend — clickable to toggle channels */}
-      <div style={{ display: 'flex', gap: 16, padding: '10px 0 0 56px', fontFamily: 'var(--mono)', fontSize: 11, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 16, padding: '10px 0 0 56px', fontFamily: 'var(--sans)', fontSize: 11, flexWrap: 'wrap' }}>
         {(['C3', 'C4', 'Cz'] as const).map((ch) => {
           const isHidden = hidden.has(ch)
           return (
