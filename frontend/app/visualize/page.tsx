@@ -127,7 +127,42 @@ function Skeleton({ height }: { height: number }) {
   return <div className="skeleton" style={{ height }} />
 }
 
-function EmptyState({ hint }: { hint?: string }) {
+function EmptyTimeSeriesIcon() {
+  return (
+    <svg width="36" height="28" viewBox="0 0 36 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+      <line x1="2" y1="20" x2="34" y2="20" strokeOpacity="0.5" />
+      <line x1="2" y1="4" x2="2" y2="20" strokeOpacity="0.5" />
+      <polyline points="2 13 5 7 8 17 12 6 16 14 20 10 24 15 28 9 32 13" />
+    </svg>
+  )
+}
+
+function EmptyPSDIcon() {
+  return (
+    <svg width="32" height="28" viewBox="0 0 32 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+      <line x1="2" y1="20" x2="30" y2="20" strokeOpacity="0.5" />
+      <line x1="2" y1="4" x2="2" y2="20" strokeOpacity="0.5" />
+      <path d="M3 18 C5 16 7 13 9 10 C10 8 11 7 12 8 C13 9 14 11 16 14 C19 17 23 18 29 19" />
+    </svg>
+  )
+}
+
+function EmptyTopoIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+      <circle cx="12" cy="13" r="8.5" />
+      <path d="M9.5 4.8 Q12 3 14.5 4.8" />
+      <path d="M3.5 10.5 Q2.5 13 3.5 15.5" />
+      <path d="M20.5 10.5 Q21.5 13 20.5 15.5" />
+      <circle cx="8.5" cy="13" r="1.1" fill="currentColor" stroke="none" opacity="0.6" />
+      <circle cx="15.5" cy="13" r="1.1" fill="currentColor" stroke="none" opacity="0.6" />
+      <circle cx="12" cy="13" r="1.1" fill="currentColor" stroke="none" opacity="0.6" />
+      <circle cx="12" cy="13" r="4.5" strokeDasharray="1.5 1.5" opacity="0.45" />
+    </svg>
+  )
+}
+
+function EmptyState({ hint, icon }: { hint?: string; icon?: React.ReactNode }) {
   return (
     <div style={{
       display: 'flex',
@@ -139,11 +174,7 @@ function EmptyState({ hint }: { hint?: string }) {
       color: 'var(--text-muted)',
       fontSize: 12,
     }}>
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}>
-        <circle cx="12" cy="12" r="9" />
-        <polyline points="10 8 6 12 10 16" />
-        <line x1="6" y1="12" x2="18" y2="12" />
-      </svg>
+      {icon}
       <span style={{ color: 'var(--text-dim)', fontSize: 11, textAlign: 'center', maxWidth: 240 }}>
         {hint ?? <>Select dataset and press <b style={{ color: 'var(--text)' }}>load</b></>}
       </span>
@@ -558,7 +589,7 @@ export default function VisualizePage() {
             ) : undefined
           }
         >
-          {loading ? <Skeleton height={280} /> : tsData ? <TimeSeriesChart data={tsData} explain={explain} /> : <EmptyState hint="Load a dataset to explore EEG signals epoch by epoch." />}
+          {loading ? <Skeleton height={280} /> : tsData ? <TimeSeriesChart data={tsData} explain={explain} /> : <EmptyState icon={<EmptyTimeSeriesIcon />} hint="Load a dataset to explore EEG signals epoch by epoch." />}
         </ChartCard>
 
         {/* PSD */}
@@ -578,7 +609,7 @@ export default function VisualizePage() {
             ) : undefined
           }
         >
-          {loading ? <Skeleton height={240} /> : psdData ? <PSDChart data={psdData} explain={explain} /> : <EmptyState hint="Load a dataset to see frequency content across motor bands." />}
+          {loading ? <Skeleton height={240} /> : psdData ? <PSDChart data={psdData} explain={explain} /> : <EmptyState icon={<EmptyPSDIcon />} hint="Load a dataset to see frequency content across motor bands." />}
         </ChartCard>
 
         {/* Topoplot */}
@@ -603,7 +634,7 @@ export default function VisualizePage() {
               <TopoplotImage data={topoData} />
               {explain && <ExplainPanel>{topoExplain}</ExplainPanel>}
             </>
-          ) : <EmptyState hint="Load a dataset to see a scalp map of brain activity." />}
+          ) : <EmptyState icon={<EmptyTopoIcon />} hint="Load a dataset to see a scalp map of brain activity." />}
         </ChartCard>
       </main>
 
