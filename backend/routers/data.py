@@ -16,7 +16,7 @@ def _get_epochs(subject: int, run_label: str):
     Precondition: subject must be an INT between 1 and 9
 
     Parameter run_label: task type label
-    Precondition: run_label must be a STRING, either 'imagined_hand' or 'imagined_feet'
+    Precondition: run_label must be a STRING, one of 'imagined_hand', 'imagined_feet', or 'imagined_tongue'
     """
     key = (subject, run_label)
     if key not in _cache:
@@ -52,7 +52,7 @@ def get_labels(
     Precondition: subject must be an INT between 1 and 9
 
     Parameter run: run label
-    Precondition: run must be a STRING, either 'imagined_hand' or 'imagined_feet'
+    Precondition: run must be a STRING, one of 'imagined_hand', 'imagined_feet', or 'imagined_tongue'
     """
     epochs = _get_epochs(subject, run)
     labels: list[str] = []
@@ -76,7 +76,7 @@ def load_data(
     Precondition: subject must be an INT between 1 and 9
 
     Parameter run: run label
-    Precondition: run must be a STRING, either 'imagined_hand' or 'imagined_feet'
+    Precondition: run must be a STRING, one of 'imagined_hand', 'imagined_feet', or 'imagined_tongue'
     """
     if dataset != "BNCI2014001":
         raise HTTPException(status_code=400, detail=f"Unknown dataset: {dataset}")

@@ -1,10 +1,11 @@
-// Mock data generators for EEG MI benchmark — TypeScript port of Claude Design/mock-data.js
+// Mock data generators for EEG MI benchmark.
+// Matches the single dataset the backend currently serves: BNCI2014001.
+// Epoch counts and time window mirror what MOABB returns for that dataset.
 
 export interface DatasetInfo {
   id: string
   label: string
   subjects: number
-  runs: number
 }
 
 export interface MockOptions {
@@ -42,13 +43,30 @@ export interface TopoplotData {
   vmax: number
 }
 
+// Only the dataset the backend actually serves.
 const DATASETS: DatasetInfo[] = [
-  { id: 'BNCI2014001', label: 'BNCI2014001', subjects: 9, runs: 6 },
-  { id: 'BNCI2014004', label: 'BNCI2014004', subjects: 9, runs: 5 },
-  { id: 'Cho2017', label: 'Cho2017', subjects: 52, runs: 1 },
-  { id: 'PhysionetMI', label: 'PhysionetMI', subjects: 109, runs: 14 },
-  { id: 'Zhou2016', label: 'Zhou2016', subjects: 4, runs: 3 },
+  { id: 'BNCI2014001', label: 'BCI Competition IV 2a (22 channels, 9 subjects)', subjects: 9 },
 ]
+
+// BNCI2014001: 3 run types matching loader._RUN_OPTIONS.
+const BNCI2014001_RUNS = ['imagined_hand', 'imagined_feet', 'imagined_tongue']
+
+// Classes available per run, matching loader._RUN_EVENTS.
+const RUN_CLASSES: Record<string, string[]> = {
+  imagined_hand:   ['left_hand', 'right_hand'],
+  imagined_feet:   ['feet'],
+  imagined_tongue: ['tongue'],
+}
+
+// Epoch counts per run for BNCI2014001:
+// 2 sessions × 6 runs × 12 trials per class per run.
+// imagined_hand has 2 classes → 2 × 6 × 12 × 2 = 288
+// imagined_feet / imagined_tongue have 1 class → 2 × 6 × 12 = 144
+const RUN_N_EPOCHS: Record<string, number> = {
+  imagined_hand:   288,
+  imagined_feet:   144,
+  imagined_tongue: 144,
+}
 
 function hash(s: string): number {
   let h = 2166136261
@@ -73,40 +91,31 @@ function lerpColor(a: number[], b: number[], t: number): number[] {
   return a.map((v, i) => Math.round(v + (b[i] - v) * t))
 }
 
-const _BNCI2014001_RUNS = ['imagined_hand', 'imagined_feet', 'imagined_tongue']
-
 export function options(): MockOptions {
   return {
     datasets: DATASETS.map((d) => d.id),
     subjects: Object.fromEntries(
       DATASETS.map((d) => [d.id, Array.from({ length: d.subjects }, (_, i) => i + 1)])
     ),
-    runs: Object.fromEntries(
-      DATASETS.map((d) => [
-        d.id,
-        d.id === 'BNCI2014001'
-          ? _BNCI2014001_RUNS
-          : Array.from({ length: d.runs }, (_, i) => `run-${String(i + 1).padStart(2, '0')}`),
-      ])
-    ),
+    runs: { BNCI2014001: BNCI2014001_RUNS },
   }
 }
 
 export function load(dataset: string, subject: number, run: string): LoadedMeta {
-  const seed = hash(`${dataset}|${subject}|${run}`)
-  const n_epochs = dataset === 'BNCI2014001' ? 48 : 30 + (seed % 30)
+  const classes = RUN_CLASSES[run] ?? ['left_hand', 'right_hand']
+  const n_epochs = RUN_N_EPOCHS[run] ?? 144
   return {
     n_epochs,
     sfreq: 250,
     tmin: -0.5,
-    tmax: 2.0,
+    tmax: 4.0,
     channels: [
       'Fz', 'FC3', 'FC1', 'FCz', 'FC2', 'FC4',
       'C5', 'C3', 'C1', 'Cz', 'C2', 'C4', 'C6',
       'CP3', 'CP1', 'CPz', 'CP2', 'CP4',
       'P1', 'Pz', 'P2', 'POz',
     ],
-    classes: ['left_hand', 'right_hand', 'feet', 'tongue'],
+    classes,
   }
 }
 
@@ -119,18 +128,27 @@ export function timeseries(
 ): TimeseriesData {
   const sfreq = 250
   const tmin = -0.5
-  const tmax = 2.0
+  const tmax = 4.0
   const N = Math.round((tmax - tmin) * sfreq) + 1
   const times = Array.from({ length: N }, (_, i) => tmin + i / sfreq)
   const rng = mulberry32(hash(`${dataset}|${subject}|${run}|${epoch_idx}`))
 
-  const cls = klass != null ? klass : epoch_idx % 4
+  // Determine class label from run type, cycling only within that run's classes.
+  const classes = RUN_CLASSES[run] ?? ['left_hand', 'right_hand']
+  const clsName = klass != null
+    ? (['left_hand', 'right_hand', 'feet', 'tongue'][klass] ?? classes[0])
+    : classes[epoch_idx % classes.length]
 
+  // Numeric class index used to select ERD target channel.
+  const CLS_IDX: Record<string, number> = { left_hand: 0, right_hand: 1, feet: 2, tongue: 3 }
+  const cls = CLS_IDX[clsName] ?? 0
+
+  // ERD envelope: Gaussian dip centred at 1.25 s, recovering by ~3 s.
   const erdOn = (t: number, target: boolean): number => {
     if (t < 0) return 1
-    const center = 1.0
-    const width = 0.7
-    const depth = target ? 0.65 : 0.05
+    const center = 1.25
+    const width = 0.8
+    const depth = target ? 0.62 : 0.05
     return 1 - depth * Math.exp(-((t - center) ** 2) / (2 * width * width))
   }
 
@@ -154,11 +172,12 @@ export function timeseries(
   return {
     times: times.map((t) => +t.toFixed(4)),
     channels: {
-      C3: chan({ 0: false, 1: true, 2: false, 3: false }),
-      C4: chan({ 0: true, 1: false, 2: false, 3: false }),
-      Cz: chan({ 0: false, 1: false, 2: true, 3: false }),
+      // C3 is contralateral for right_hand (cls=1), C4 for left_hand (cls=0), Cz for feet (cls=2).
+      C3: chan({ 1: true }),
+      C4: chan({ 0: true }),
+      Cz: chan({ 2: true }),
     },
-    class_label: ['left_hand', 'right_hand', 'feet', 'tongue'][cls],
+    class_label: clsName,
   }
 }
 
@@ -172,7 +191,16 @@ export function psd(
   for (let f = 1; f <= 40; f += 0.5) freqs.push(+f.toFixed(1))
   const rng = mulberry32(hash(`${dataset}|${subject}|${run}|${channel}|psd`))
 
-  const muSuppression = channel === 'C3' || channel === 'C4' ? 0.55 : 1.0
+  // Mu suppression is run- and channel-specific.
+  // imagined_hand: bilateral motor cortex (C3, C4) suppressed.
+  // imagined_feet: midline (Cz) suppressed.
+  // imagined_tongue: weak diffuse suppression across all channels.
+  const muSuppression =
+    run === 'imagined_hand'   ? (channel === 'C3' || channel === 'C4' ? 0.50 : 0.90) :
+    run === 'imagined_feet'   ? (channel === 'Cz' ? 0.50 : 0.85) :
+    run === 'imagined_tongue' ? 0.80 :
+    0.70
+
   const power = freqs.map((f) => {
     const oneOverF = 22 - 10 * Math.log10(f)
     const alpha = muSuppression * 9 * Math.exp(-((f - 10.2) ** 2) / (2 * 1.4 ** 2))
@@ -203,13 +231,37 @@ export function topoplot(
     ['POz', 0.0, -0.78],
   ].map(([n, x, y]) => ({ name: n as string, x: cx + (x as number) * R, y: cy - (y as number) * R }))
 
-  const sourcesMap: Record<string, { name: string; v: number }[]> = {
-    mu: [{ name: 'C3', v: -1.0 }, { name: 'C4', v: -0.9 }, { name: 'Cz', v: -0.1 }, { name: 'Pz', v: 0.2 }, { name: 'Fz', v: 0.3 }],
-    beta: [{ name: 'C3', v: -0.6 }, { name: 'C4', v: -0.55 }, { name: 'FCz', v: -0.2 }, { name: 'CPz', v: 0.0 }],
-    alpha: [{ name: 'POz', v: 1.0 }, { name: 'Pz', v: 0.85 }, { name: 'P1', v: 0.7 }, { name: 'P2', v: 0.7 }, { name: 'Cz', v: 0.2 }],
-    broadband: [{ name: 'Cz', v: 0.4 }, { name: 'FCz', v: 0.3 }, { name: 'CPz', v: 0.3 }, { name: 'Fz', v: 0.2 }],
+  // Source maps reflect run-specific spatial patterns.
+  // imagined_hand: bilateral C3/C4 suppression.
+  // imagined_feet: midline Cz suppression.
+  // imagined_tongue: weak midline, more frontal spread.
+  const sourcesMap: Record<string, Record<string, { name: string; v: number }[]>> = {
+    mu: {
+      imagined_hand:   [{ name: 'C3', v: -1.0 }, { name: 'C4', v: -0.9 }, { name: 'Cz', v: -0.1 }, { name: 'Pz', v: 0.2 }, { name: 'Fz', v: 0.3 }],
+      imagined_feet:   [{ name: 'Cz', v: -1.0 }, { name: 'C1', v: -0.7 }, { name: 'C2', v: -0.7 }, { name: 'CPz', v: -0.5 }, { name: 'Fz', v: 0.2 }],
+      imagined_tongue: [{ name: 'Cz', v: -0.5 }, { name: 'FCz', v: -0.4 }, { name: 'C3', v: -0.3 }, { name: 'C4', v: -0.3 }],
+    },
+    beta: {
+      imagined_hand:   [{ name: 'C3', v: -0.6 }, { name: 'C4', v: -0.55 }, { name: 'FCz', v: -0.2 }, { name: 'CPz', v: 0.0 }],
+      imagined_feet:   [{ name: 'Cz', v: -0.6 }, { name: 'CPz', v: -0.4 }, { name: 'C1', v: -0.3 }, { name: 'C2', v: -0.3 }],
+      imagined_tongue: [{ name: 'FCz', v: -0.4 }, { name: 'Cz', v: -0.3 }, { name: 'Fz', v: -0.2 }],
+    },
+    alpha: {
+      imagined_hand:   [{ name: 'POz', v: 1.0 }, { name: 'Pz', v: 0.85 }, { name: 'P1', v: 0.7 }, { name: 'P2', v: 0.7 }, { name: 'Cz', v: 0.2 }],
+      imagined_feet:   [{ name: 'POz', v: 1.0 }, { name: 'Pz', v: 0.85 }, { name: 'P1', v: 0.7 }, { name: 'P2', v: 0.7 }, { name: 'Cz', v: 0.2 }],
+      imagined_tongue: [{ name: 'POz', v: 1.0 }, { name: 'Pz', v: 0.85 }, { name: 'P1', v: 0.7 }, { name: 'P2', v: 0.7 }, { name: 'Cz', v: 0.2 }],
+    },
+    broadband: {
+      imagined_hand:   [{ name: 'Cz', v: 0.4 }, { name: 'FCz', v: 0.3 }, { name: 'CPz', v: 0.3 }, { name: 'Fz', v: 0.2 }],
+      imagined_feet:   [{ name: 'Cz', v: 0.4 }, { name: 'FCz', v: 0.3 }, { name: 'CPz', v: 0.3 }, { name: 'Fz', v: 0.2 }],
+      imagined_tongue: [{ name: 'Cz', v: 0.4 }, { name: 'FCz', v: 0.3 }, { name: 'CPz', v: 0.3 }, { name: 'Fz', v: 0.2 }],
+    },
   }
-  const sources = sourcesMap[freq_band] || [{ name: 'Cz', v: 0.5 }]
+
+  const sources =
+    sourcesMap[freq_band]?.[run] ??
+    sourcesMap[freq_band]?.['imagined_hand'] ??
+    [{ name: 'Cz', v: 0.5 }]
 
   const evals = electrodes.map((e) => {
     let num = 0, den = 0
@@ -299,9 +351,9 @@ export function topoplot(
   const cb = `
     <defs><linearGradient id="cbGrad" x1="0" y1="1" x2="0" y2="0">${stopStrs.join('')}</linearGradient></defs>
     <rect x="${cbX}" y="${cbY}" width="${cbW}" height="${cbH}" fill="url(#cbGrad)" stroke="var(--topo-cb-stroke, #334155)" stroke-width="0.6"/>
-    <text x="${cbX + cbW + 4}" y="${cbY + 6}" font-family="var(--mono)" font-size="9" fill="var(--topo-cb-label, #94a3b8)">+${absMax.toFixed(2)}</text>
-    <text x="${cbX + cbW + 4}" y="${cbY + cbH / 2 + 3}" font-family="var(--mono)" font-size="9" fill="var(--topo-cb-label, #94a3b8)">0</text>
-    <text x="${cbX + cbW + 4}" y="${cbY + cbH + 2}" font-family="var(--mono)" font-size="9" fill="var(--topo-cb-label, #94a3b8)">-${absMax.toFixed(2)}</text>
+    <text x="${cbX + cbW + 4}" y="${cbY + 6}" font-family="var(--sans)" font-size="9" fill="var(--topo-cb-label, #94a3b8)">+${absMax.toFixed(2)}</text>
+    <text x="${cbX + cbW + 4}" y="${cbY + cbH / 2 + 3}" font-family="var(--sans)" font-size="9" fill="var(--topo-cb-label, #94a3b8)">0</text>
+    <text x="${cbX + cbW + 4}" y="${cbY + cbH + 2}" font-family="var(--sans)" font-size="9" fill="var(--topo-cb-label, #94a3b8)">-${absMax.toFixed(2)}</text>
   `
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
