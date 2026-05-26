@@ -90,38 +90,11 @@ function WarnIcon() {
 }
 
 // ---- ExplainPanel --------------------------------------------------------
-function ExplainPanel({ short, full }: { short: string; full?: string }) {
-  const [expanded, setExpanded] = useState(false)
+function ExplainPanel({ children }: { children: React.ReactNode }) {
   return (
     <div className="explain">
       <InfoIcon />
-      <p>
-        {expanded && full ? full : short}
-        {full && !expanded && (
-          <>
-            {' '}
-            <a
-              href="#"
-              style={{ color: 'var(--accent)', textUnderlineOffset: '2px' }}
-              onClick={(e) => { e.preventDefault(); setExpanded(true) }}
-            >
-              more ↓
-            </a>
-          </>
-        )}
-        {expanded && (
-          <>
-            {' '}
-            <a
-              href="#"
-              style={{ color: 'var(--text-muted)', textUnderlineOffset: '2px', fontSize: '9px' }}
-              onClick={(e) => { e.preventDefault(); setExpanded(false) }}
-            >
-              less ↑
-            </a>
-          </>
-        )}
-      </p>
+      <p>{children}</p>
     </div>
   )
 }
@@ -132,13 +105,12 @@ interface ChartCardProps {
   meta: React.ReactNode
   controls?: React.ReactNode
   explain: boolean
-  explainText: string
-  explainTextFull?: string
+  explainContent?: React.ReactNode
   children: React.ReactNode
   animClass?: string
 }
 
-function ChartCard({ title, meta, controls, explain, explainText, explainTextFull, children, animClass }: ChartCardProps) {
+function ChartCard({ title, meta, controls, explain, explainContent, children, animClass }: ChartCardProps) {
   return (
     <section className={'card' + (animClass ? ' ' + animClass : '')}>
       <header className="card-head">
@@ -149,8 +121,8 @@ function ChartCard({ title, meta, controls, explain, explainText, explainTextFul
         {controls && <div className="card-controls">{controls}</div>}
       </header>
       <div className="card-body">{children}</div>
-      {explain && explainText && (
-        <ExplainPanel short={explainText} full={explainTextFull} />
+      {explain && explainContent && (
+        <ExplainPanel>{explainContent}</ExplainPanel>
       )}
     </section>
   )
@@ -170,7 +142,6 @@ function EmptyState({ onLoad }: { onLoad?: () => void }) {
       height: 240,
       gap: 12,
       color: 'var(--text-muted)',
-      fontFamily: 'var(--mono)',
       fontSize: 12,
     }}>
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}>
@@ -197,7 +168,6 @@ function ClassBadge({ label }: { label: string }) {
   const display = label.replace('_', ' ')
   return (
     <span style={{
-      fontFamily: 'var(--mono)',
       fontSize: 10,
       color,
       padding: '2px 8px',
@@ -225,12 +195,12 @@ function EpochStrip({ labels, current, onSelect }: { labels: string[]; current: 
   return (
     <div style={{ marginTop: 8, marginBottom: 2 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+        <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
           Epoch strip
         </span>
         <div style={{ display: 'flex', gap: 10 }}>
           {Object.entries(counts).map(([label, count]) => (
-            <span key={label} style={{ fontFamily: 'var(--mono)', fontSize: 9, color: LABEL_COLORS[label] ?? '#888', letterSpacing: '0.05em' }}>
+            <span key={label} style={{ fontSize: 9, color: LABEL_COLORS[label] ?? '#888', letterSpacing: '0.05em' }}>
               {label.replace('_', ' ')} <b style={{ color: 'var(--text)' }}>{count}</b>
             </span>
           ))}
@@ -486,59 +456,34 @@ export default function VisualizePage() {
 
   const totalEpochs = loaded?.n_epochs ?? 1
 
-  const tsExplainShort =
+  const tsExplain: React.ReactNode =
     tsData?.class_label === 'right_hand'
-      ? 'Each line is a scalp electrode near your motor cortex. Watch the C3 line (left hemisphere) dip after the 0 s cue — that\'s your brain going quieter as you imagine moving your right hand.'
+      ? <>Watch the <strong>C3 line dip</strong> after 0 s — that&apos;s left motor cortex going quiet as you imagine your right hand.</>
       : tsData?.class_label === 'left_hand'
-      ? 'C4 (right hemisphere) dips after the cue for left-hand imagery. Your brain suppresses activity on the side opposite to the imagined limb — the wider the gap between C3 and C4, the easier it is to classify.'
+      ? <>The <strong>C4 line dips</strong> after the cue — motor cortex quiets on the side opposite to the imagined hand.</>
       : tsData?.class_label === 'feet'
-      ? 'Foot motor cortex sits at the top-center of the brain, so the Cz line (midline) drops most after the cue. The sides (C3/C4) stay relatively flat — a clean midline-only dip.'
+      ? <>The <strong>Cz line dips</strong> most — foot motor cortex sits on the midline, right below that electrode.</>
       : tsData?.class_label === 'tongue'
-      ? 'Tongue motor cortex is near the midline and slightly lateral. After the cue, Cz and neighboring channels dip — distinct from the strong left/right asymmetry you\'d see for hand imagery.'
-      : 'Three electrodes near motor cortex. The flat region before 0 s is baseline. After the cue, watch for a dip in the lines — that\'s your brain "quieting down" during imagined movement.'
+      ? <>A <strong>modest Cz dip</strong> after the cue — tongue imagery is more midline and less asymmetric than hand imagery.</>
+      : <>Watch for a <strong>dip in the lines</strong> after 0 s — that&apos;s motor cortex going quiet during imagined movement.</>
 
-  const tsExplainFull =
-    tsData?.class_label === 'right_hand'
-      ? 'When you imagine moving your right hand, neurons in the left motor cortex (C3) suppress their natural 8–13 Hz rhythm — like turning down background radio static. This drop is called event-related desynchronization (ERD). The classifier learns to spot which electrode dips most to determine which hand you imagined.'
-      : tsData?.class_label === 'left_hand'
-      ? 'Imagining your left hand quiets the right motor cortex, so C4 dips after the cue. C3 stays relatively active. The classifier reads this asymmetry: if C4 drops more than C3, it predicts left hand. This left-right pattern is the core feature that makes motor imagery classifiable.'
-      : tsData?.class_label === 'feet'
-      ? 'Feet motor imagery activates the top-center of cortex (the medial wall), which maps directly to the Cz electrode. Unlike hand imagery — which creates an obvious left-right asymmetry — feet imagery creates a front-to-back pattern centered on Cz. C3 and C4 stay quiet while Cz dips.'
-      : tsData?.class_label === 'tongue'
-      ? 'Tongue motor cortex sits near the midline and slightly lateral. Its imagery pattern is more diffuse than hand imagery, showing a modest dip at Cz with less pronounced left-right asymmetry. The classifier uses the unique spatial fingerprint to distinguish tongue from hand or feet imagery.'
-      : `Motor imagery epoch from subject ${subject}. Baseline runs from −0.5 s before the cue to 0 s. The imagery window is 0–4 s. C3 sits over left motor cortex, C4 over right, and Cz is the midline. Use arrow keys or the play button to browse all ${loaded?.n_epochs ?? ''} epochs.`
-
-  const psdExplainShort =
+  const psdExplain: React.ReactNode =
     run === 'imagined_hand'
-      ? 'This "frequency fingerprint" shows brain activity at each Hz. The dip between 8–13 Hz (mu rhythm) is your motor cortex going quieter during imagined movement — that dip is the core signal this BCI uses.'
+      ? <>The <strong>hollow at 8–13 Hz</strong> is the mu rhythm quieting — the deeper the dip, the stronger the imagery signal the BCI reads.</>
       : run === 'imagined_feet'
-      ? 'The hollow around 8–13 Hz is the mu rhythm suppressing during foot imagery. Cz typically shows the deepest dip, since foot motor cortex is on the midline directly below it.'
+      ? <>The <strong>Cz dip at 8–13 Hz</strong> is clearest for feet imagery — foot motor cortex sits on the midline, right below that electrode.</>
       : run === 'imagined_tongue'
-      ? 'Tongue imagery produces a broader mu suppression (8–13 Hz) across channels. Compare channels using the buttons above to see where the dip is deepest.'
-      : 'Brain activity at each frequency, averaged across all trials. The dip around 8–13 Hz is the mu rhythm — your motor cortex goes quieter when you imagine moving.'
+      ? <>The <strong>mu dip (8–13 Hz)</strong> is more diffuse for tongue imagery — compare channels to see where it&apos;s deepest.</>
+      : <>The <strong>dip around 8–13 Hz</strong> is the mu rhythm — motor cortex goes quieter when you imagine moving.</>
 
-  const psdExplainFull =
-    run === 'imagined_hand'
-      ? `This shows how much electrical power exists at each frequency (1–40 Hz), averaged across all ${loaded?.n_epochs ?? ''} trials. Your motor cortex has a natural "idle" rhythm at 8–13 Hz (mu) and 13–30 Hz (beta). When you imagine a movement, these rhythms suppress — leaving a dip in the curve. A deeper C3 dip vs. C4 signals right-hand imagery; a deeper C4 signals left hand. Use the C3 / C4 / Cz buttons to compare.`
-      : `This shows how much electrical power exists at each frequency (1–40 Hz), averaged across all ${loaded?.n_epochs ?? ''} trials. The dip around 8–13 Hz is the mu rhythm suppressing during motor imagery — the brain turning down its "idle" motor oscillation. For feet and tongue imagery, the suppression is strongest at Cz (midline) rather than the lateral channels.`
-
-  const topoExplainShort =
+  const topoExplain: React.ReactNode =
     freqBand === 'mu'
-      ? 'A top-down head view. Cool/blue areas have lower brain activity — motor cortex goes "quiet" during imagined movement. That cool patch over C3/C4 is the signal the classifier reads.'
+      ? <><strong>Cool patches over C3/C4</strong> mean motor cortex went quiet — that spatial pattern is exactly what the classifier reads.</>
       : freqBand === 'beta'
-      ? 'Beta (13–30 Hz) map. Suppression is more focused than the mu map and recovers sharply after the imagery window ends — a separate but complementary signature.'
+      ? <><strong>Beta suppression</strong> is more focused than mu and rebounds sharply after imagery ends — a separate useful signature.</>
       : freqBand === 'alpha'
-      ? 'Alpha in the occipital region (back of head) is a visual resting rhythm, unrelated to motor imagery. It\'s shown here as a sanity check — that hot patch at the back should look the same regardless of task.'
-      : 'All frequencies averaged together — this washes out task-specific patterns. You\'re seeing overall signal strength, not the motor-specific information the classifier uses.'
-
-  const topoExplainFull =
-    freqBand === 'mu'
-      ? 'The mu map (8–13 Hz) shows which brain areas suppressed their rhythms during motor imagery, averaged across all trials. Cool colors (blue) over C3 and C4 mean motor cortex went "quiet" — exactly where it should. CSP and Riemannian classifiers encode this spatial pattern as a covariance matrix to distinguish classes.'
-      : freqBand === 'beta'
-      ? 'Beta-band (13–30 Hz) topography shows sensorimotor suppression with a tighter spatial pattern than mu. After the imagery window ends, beta rebounds strongly — a phenomenon called "beta rebound" — which is a reliable contralateral signature that some BCI pipelines also exploit.'
-      : freqBand === 'alpha'
-      ? 'Alpha topography is dominated by the posterior alpha rhythm in occipital cortex — completely unrelated to motor imagery. This view is intentionally included as a sanity check: the occipital "hotspot" should look the same regardless of which hand or movement you imagined.'
-      : 'Broadband power (1–40 Hz) blends the task-specific motor signal with unrelated rhythms like occipital alpha and frontal theta. The result shows raw amplitude distribution across the scalp. Switch to the mu or beta maps to see the motor-specific patterns the classifier actually uses.'
+      ? <>The <strong>occipital hotspot</strong> (back of head) is visual cortex at rest — unrelated to movement, shown as a sanity check.</>
+      : <><strong>All frequencies blended</strong> — switch to mu or beta to see the motor-specific patterns the classifier actually uses.</>
 
   if (!appOptions) {
     return (
@@ -571,7 +516,6 @@ export default function VisualizePage() {
           border: '1px solid rgba(234,179,8,0.25)',
           borderRadius: 6,
           marginTop: 12,
-          fontFamily: 'var(--mono)',
           fontSize: 11,
           color: '#fbbf24',
         }}>
@@ -637,8 +581,7 @@ export default function VisualizePage() {
             ) : undefined
           }
           explain={explain}
-          explainText={tsExplainShort}
-          explainTextFull={tsExplainFull}
+          explainContent={tsExplain}
         >
           {loading ? <Skeleton height={280} /> : tsData ? <TimeSeriesChart data={tsData} /> : <EmptyState />}
         </ChartCard>
@@ -660,8 +603,7 @@ export default function VisualizePage() {
             ) : undefined
           }
           explain={explain}
-          explainText={psdExplainShort}
-          explainTextFull={psdExplainFull}
+          explainContent={psdExplain}
         >
           {loading ? <Skeleton height={240} /> : psdData ? <PSDChart data={psdData} /> : <EmptyState />}
         </ChartCard>
@@ -683,8 +625,7 @@ export default function VisualizePage() {
             ) : undefined
           }
           explain={explain}
-          explainText={topoExplainShort}
-          explainTextFull={topoExplainFull}
+          explainContent={topoExplain}
         >
           {loading ? <Skeleton height={280} /> : topoData ? <TopoplotImage data={topoData} /> : <EmptyState />}
         </ChartCard>
@@ -697,7 +638,7 @@ export default function VisualizePage() {
         {isMockFallback && <span style={{ color: '#fbbf24', marginLeft: 8 }}>⚠ mock fallback</span>}
         <span className="sep">·</span>
         <span>BNCI2014001 · MNE / MOABB</span>
-        <span style={{ marginLeft: 'auto' }} className="mono">CNEW Munich · Jun 17 2026</span>
+        <span style={{ marginLeft: 'auto' }}>CNEW Munich · Jun 17 2026</span>
       </footer>
     </>
   )

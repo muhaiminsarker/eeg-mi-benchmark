@@ -82,7 +82,7 @@ function Dropdown({ label, value, options, onChange, width = 160, disabled = fal
         onClick={() => !disabled && setOpen((o) => !o)}
         disabled={disabled}
         className="dropdown-btn"
-        style={{ width, height: 28, fontSize: 11 }}
+        style={{ width, fontSize: 11 }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11, color: 'var(--text)' }}>
           {current?.label ?? value}
@@ -167,16 +167,16 @@ export default function TopBar({ options, loaded, loading, explain, onExplainCha
 
       <div className="topbar-div" />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span className="topbar-ctx-lbl">Dataset</span>
           <Dropdown label="dataset" value={dataset} options={options.datasets} onChange={handleDatasetChange} width={148} />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span className="topbar-ctx-lbl">Subject</span>
           <Dropdown label="subject" value={subject} options={subjectOpts} onChange={setSubject} width={72} />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span className="topbar-ctx-lbl">Task</span>
           <Dropdown label="task" value={run} options={runOpts} onChange={setRun} width={160} />
         </div>
@@ -186,7 +186,7 @@ export default function TopBar({ options, loaded, loading, explain, onExplainCha
         className={'load-btn' + (loading ? ' loading' : '')}
         onClick={() => onLoad(dataset, parseInt(subject), run)}
         disabled={loading}
-        style={{ height: 30, fontSize: 11, padding: '0 12px' }}
+        style={{ fontSize: 11, padding: '0 14px' }}
       >
         {loading ? <><Spinner /> Loading…</> : <><PlayIcon /> Load</>}
       </button>
