@@ -455,12 +455,12 @@ export default function VisualizePage() {
 
   const topoExplain: React.ReactNode =
     freqBand === 'mu'
-      ? <><strong>Cool patches over C3/C4</strong> mean motor cortex went quiet — that spatial pattern is exactly what the classifier reads.</>
+      ? <><strong>Cool patches over C3/C4</strong> mean motor cortex went quiet. That spatial pattern is exactly what the classifier reads.</>
       : freqBand === 'beta'
-      ? <><strong>Beta suppression</strong> is more focused than mu and rebounds sharply after imagery ends — a separate useful signature.</>
+      ? <><strong>Beta suppression</strong> is more focused than mu and rebounds sharply after imagery ends, a separate useful signature.</>
       : freqBand === 'alpha'
-      ? <>The <strong>occipital hotspot</strong> (back of head) is visual cortex at rest — unrelated to movement, shown as a sanity check.</>
-      : <><strong>All frequencies blended</strong> — switch to mu or beta to see the motor-specific patterns the classifier actually uses.</>
+      ? <>The <strong>occipital hotspot</strong> (back of head) is visual cortex at rest, unrelated to movement. Shown here as a sanity check.</>
+      : <><strong>All frequencies blended.</strong> Switch to mu or beta to see the motor-specific patterns the classifier actually uses.</>
 
   if (!appOptions) {
     return (
@@ -497,7 +497,7 @@ export default function VisualizePage() {
           color: '#fbbf24',
         }}>
           <WarnIcon />
-          Backend load failed — showing synthetic mock data as fallback. Real data unavailable.
+          Backend load failed. Showing synthetic mock data as fallback. Real data unavailable.
         </div>
       )}
 
